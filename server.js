@@ -26,8 +26,7 @@ const limiter = rateLimit({ windowMs: 60000, max: 200, message: { error: 'Too ma
 app.use(limiter);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
-const staticDir = path.join(__dirname, '..', 'frontend');
-if (fs.existsSync(staticDir)) app.use(express.static(staticDir));
+app.use(express.static(__dirname));
 
 // Multer
 const storage = multer.diskStorage({ destination: (r, f, cb) => cb(null, UPLOADS_DIR), filename: (r, f, cb) => cb(null, Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(f.originalname)) });

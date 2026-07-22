@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4F46E5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/style.css">
+<script src="/env.js"></script>
+<title>Davomat Jurnali</title>
+</head>
+<body>
+
+<header class="header">
+  <div class="container">
+    <button class="icon-btn hidden" id="backBtn">&#8592;</button>
+    <h1 id="headerTitle">Davomat Jurnali</h1>
+    <button class="icon-btn hidden" id="multiSelectToggle" title="Tanlash">&#x2611;</button>
+    <button class="icon-btn" id="moreBtn" title="Ko'proq">&#8942;</button>
+    <button class="icon-btn" id="themeToggle" title="Tema">&#127769;</button>
+    <button class="icon-btn" id="printBtn" title="Chop etish">&#128424;</button>
+    <button class="icon-btn hidden" id="statsBtn" title="Statistika">&#128202;</button>
+  </div>
+</header>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<main class="container">
+
+<!-- ==================== HOME ==================== -->
+<section id="pageHome" class="page">
+  <div class="card mb-4 no-print">
+    <div class="form-row"><input type="text" id="groupNameInput" placeholder="Guruh nomi" maxlength="50" autocomplete="off"><button class="btn btn-primary" id="addGroupBtn">+ Qo'shish</button></div>
+  </div>
+  <div id="dashboardContainer" class="mb-4"></div>
+  <div class="search-wrap mb-2 no-print"><span class="search-icon">&#128269;</span><input type="text" class="search-input" id="groupSearchInput" placeholder="Guruhlarni qidirish..." autocomplete="off"></div>
+  <div class="section-title">Guruhlar <span id="groupCount" class="text-sm text-secondary"></span></div>
+  <div id="groupsContainer"><div class="empty-state" id="emptyGroups"><span class="empty-state-ill">&#128218;</span><p>Hozircha guruhlar yo'q.<br>Yangi guruh yarating.</p></div></div>
+</section>
+
+<!-- ==================== GROUP ==================== -->
+<section id="pageGroup" class="page hidden">
+  <div class="card mb-4 no-print">
+    <div class="form-row"><input type="text" id="studentNameInput" placeholder="O'quvchi ismi" maxlength="50" autocomplete="off"><button class="btn btn-primary" id="addStudentBtn">+ Qo'shish</button></div>
+  </div>
+  <div class="bulk-bar no-print">
+    <button class="btn btn-success btn-sm" id="allPresentBtn">Keldi</button>
+    <button class="btn btn-warning btn-sm" id="allLateBtn">Kechikdi</button>
+    <button class="btn btn-info btn-sm" id="allExcusedBtn">Sababli</button>
+    <button class="btn btn-danger btn-sm" id="allAbsentBtn">Kelmadi</button>
+    <button class="btn btn-outline btn-sm" id="clearAllBtn">Tozala</button>
+  </div>
+  <div class="sort-bar no-print">
+    <label for="sortSelect">Saralash:</label>
+    <select id="sortSelect"><option value="name">Ism</option><option value="present">Keldi</option><option value="absent">Kelmadi</option><option value="late">Kechikdi</option></select>
+  </div>
+  <div class="search-wrap mb-2 no-print"><span class="search-icon">&#128269;</span><input type="text" class="search-input" id="studentSearchInput" placeholder="O'quvchilarni qidirish..." autocomplete="off"></div>
+  <div class="date-bar mb-2">
+    <div class="date-field"><label for="dateInput">Sana</label><input type="date" id="dateInput"></div>
+  </div>
+  <div class="filter-bar no-print" id="filterBar">
+    <button class="filter-btn active" data-filter="all">Barcha</button>
+    <button class="filter-btn" data-filter="present">Keldi</button>
+    <button class="filter-btn" data-filter="absent">Kelmadi</button>
+    <button class="filter-btn" data-filter="late">Kechikdi</button>
+    <button class="filter-btn" data-filter="excused">Sababli</button>
+  </div>
+  <div class="copy-bar no-print">
+    <button class="btn btn-outline btn-sm" id="copyAttendanceBtn">&#128203; Nusxalash</button>
+    <button class="btn btn-outline btn-sm" id="pasteAttendanceBtn">&#128203; Qo'yish</button>
+    <button class="btn btn-outline btn-sm" id="profileBtn">&#128100; Profil</button>
+  </div>
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between"><span>O'quvchilar</span><span id="studentCount" class="text-sm text-secondary"></span></div>
+  <div id="studentsContainer"><div class="empty-state" id="emptyStudents"><span class="empty-state-ill">&#127891;</span><p>Hozircha o'quvchilar yo'q.<br>Yangi o'quvchi qo'shing.</p></div></div>
+  <div class="save-bar no-print" style="display:none"><button class="btn btn-success btn-block" id="saveAttendanceBtn">&#x2705; Saqlandi</button></div>
+</section>
+
+<!-- ==================== MORE MENU ==================== -->
+<div class="modal-overlay hidden" id="moreModal">
+  <div class="modal" style="max-width:380px">
+    <h2>Boshqa imkoniyatlar</h2>
+    <div style="display:grid;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline btn-block" id="importStudentBtn">&#128229; Import</button>
+      <button class="btn btn-outline btn-block" id="exportOptionsBtn">&#128202; Export (sana oralig'i)</button>
+    </div>
+    <div class="section-title">Export</div>
+    <div style="display:grid;gap:8px">
+      <button class="btn btn-outline btn-block" id="exportExcelBtn">&#128202; Excel</button>
+      <button class="btn btn-outline btn-block" id="exportPdfBtn">&#128196; PDF</button>
+    </div>
+    <div class="section-title">Guruh bo'yicha</div>
+    <div style="display:grid;gap:8px">
+      <button class="btn btn-outline btn-block" id="rankingBtn">&#127942; Reyting</button>
+      <button class="btn btn-outline btn-block" id="worstDaysBtn">&#128531; Eng ko'p qatnashilmagan kunlar</button>
+      <button class="btn btn-outline btn-block" id="heatmapBtn">&#128200; Issiqlik xaritasi</button>
+    </div>
+    <div class="section-title">Til</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="btn btn-sm btn-outline lang-btn" data-lang="uz">O'zbek</button>
+      <button class="btn btn-sm btn-outline lang-btn" data-lang="en">English</button>
+      <button class="btn btn-sm btn-outline lang-btn" data-lang="ru">Русский</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="closeMoreBtn">Yopish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EXPORT DIALOG ==================== -->
+<div class="modal-overlay hidden" id="exportModal">
+  <div class="modal" style="max-width:360px">
+    <h2>Export (sana oralig'i)</h2>
+    <div class="profile-field"><label>Dan</label><input type="date" id="exportFrom"></div>
+    <div class="profile-field"><label>Gacha</label><input type="date" id="exportTo"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelExportBtn">Bekor qilish</button>
+      <button class="btn btn-primary" id="doExportExcelBtn">Excel</button>
+      <button class="btn btn-primary" id="doExportPdfBtn">PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== STATS ==================== -->
+<div class="modal-overlay hidden" id="statsModal">
+  <div class="modal" style="max-width:540px">
+    <div class="tabs no-print">
+      <button class="tab active" data-stab="stats">Statistika</button>
+      <button class="tab" data-stab="ranking">Reyting</button>
+      <button class="tab" data-stab="worst">Eng yomon kunlar</button>
+      <button class="tab" data-stab="chart">Grafik</button>
+      <button class="tab" data-stab="heatmap">Xarita</button>
+    </div>
+    <h2 id="statsModalTitle">Statistika</h2>
+    <div class="stat-date-range no-print" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:10px">
+      <div style="flex:1;min-width:100px"><label style="font-size:.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:2px" for="statsFrom">Dan</label><input type="date" id="statsFrom"></div>
+      <div style="flex:1;min-width:100px"><label style="font-size:.75rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:2px" for="statsTo">Gacha</label><input type="date" id="statsTo"></div>
+      <button class="btn btn-primary btn-sm" id="statsFilterBtn">Filtrlash</button>
+      <button class="btn btn-outline btn-sm" id="statsResetBtn">Reset</button>
+    </div>
+    <div id="statsTabContent"><div class="stats-summary" id="statsSummary"></div><div class="section-title">O'quvchilar bo'yicha</div><div id="statsContent"><div class="loading-state"><div class="spinner"></div><p>Yuklanmoqda...</p></div></div></div>
+    <div id="rankingTabContent" class="hidden"><div id="rankingContent"><div class="loading-state"><div class="spinner"></div></div></div></div>
+    <div id="worstTabContent" class="hidden"><div id="worstContent"><div class="loading-state"><div class="spinner"></div></div></div></div>
+    <div id="chartTabContent" class="hidden"><div class="chart-wrap"><canvas id="trendChart"></canvas></div></div>
+    <div id="heatmapTabContent" class="hidden"><div class="heatmap-wrap" id="heatmapContent"><div class="loading-state"><div class="spinner"></div></div></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-success btn-sm" id="exportCsvBtn">CSV</button>
+      <button class="btn btn-primary btn-sm" id="closeStatsBtn">Yopish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== IMPORT ==================== -->
+<div class="modal-overlay hidden" id="importModal">
+  <div class="modal" style="max-width:440px">
+    <h2>O'quvchilarni import qilish</h2>
+    <p class="text-sm text-secondary mb-2">Har bir qatorga bitta ism yozing yoki vergul bilan ajrating</p>
+    <div class="file-drop" id="fileDrop">&#128206; Fayl tanlash yoki matnni pastga yozing</div>
+    <div class="mb-2">
+      <label class="text-sm text-secondary" for="importText" style="display:block;margin-bottom:4px">Yoki matnni kiriting:</label>
+      <textarea id="importText" rows="6" style="width:100%;padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:.85rem;outline:none;background:var(--surface);color:var(--text);resize:vertical" placeholder="Ali Valiyev, Olim Soliyev&#10;Zarina Azimova"></textarea>
+    </div>
+    <p id="importPreview" class="text-sm text-secondary mb-2"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelImportBtn">Bekor qilish</button>
+      <button class="btn btn-primary" id="doImportBtn">&#128229; Import qilish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HISTORY ==================== -->
+<div class="modal-overlay hidden" id="historyModal">
+  <div class="modal" style="max-width:400px">
+    <h2 id="historyModalTitle">O'quvchi tarixi</h2>
+    <div id="studentProfileInfo" class="text-sm text-secondary mb-2" style="display:none"></div>
+    <button class="btn btn-outline btn-sm mb-2" id="editProfileFromHistoryBtn" style="display:none">&#128100; Profilni tahrirlash</button>
+    <div class="stats-summary" id="historySummary"></div>
+    <div class="section-title">Davomat kunlari</div>
+    <div id="historyContent"><div class="loading-state"><div class="spinner"></div></div></div>
+    <div class="modal-actions"><button class="btn btn-primary btn-sm" id="closeHistoryBtn">Yopish</button></div>
+  </div>
+</div>
+
+<!-- ==================== MONTHLY MODAL ==================== -->
+<div class="modal-overlay hidden" id="monthlyModal">
+  <div class="modal" style="max-width:420px">
+    <h2 id="monthlyModalTitle">Oylik hisobot</h2>
+    <div id="monthlyContent"><div class="loading-state"><div class="spinner"></div></div></div>
+    <div class="modal-actions"><button class="btn btn-primary btn-sm" id="closeMonthlyBtn">Yopish</button></div>
+  </div>
+</div>
+
+<!-- ==================== EDIT ==================== -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal"><h2 id="editModalTitle">Tahrirlash</h2>
+    <div class="form-row"><input type="text" id="editInput" maxlength="50" autocomplete="off"></div>
+    <div class="modal-actions"><button class="btn btn-outline" id="cancelEditBtn">Bekor qilish</button><button class="btn btn-primary" id="saveEditBtn">Saqlash</button></div>
+  </div>
+</div>
+
+<!-- ==================== PROFILE MODAL ==================== -->
+<div class="modal-overlay hidden" id="profileModal">
+  <div class="modal" style="max-width:380px">
+    <h2 id="profileModalTitle">O'quvchi profili</h2>
+    <div class="profile-field"><label>Telefon</label><input type="text" id="profilePhone" maxlength="20" placeholder="+998 XX XXX XX XX"></div>
+    <div class="profile-field"><label>Manzil</label><input type="text" id="profileAddress" maxlength="100" placeholder="Shahar, ko'cha, uy"></div>
+    <div class="profile-field"><label>Ota-ona ismi</label><input type="text" id="profileParentName" maxlength="50"></div>
+    <div class="profile-field"><label>Ota-ona telefoni</label><input type="text" id="profileParentPhone" maxlength="20"></div>
+    <div class="profile-field"><label>Izoh</label><input type="text" id="profileNotes" maxlength="200"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="closeProfileBtn">Yopish</button>
+      <button class="btn btn-primary" id="saveProfileBtn">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<div class="ptr-indicator" id="ptrIndicator"><span class="ptr-spinner"></span> Yangilanmoqda...</div>
+
+<script>
+const API_URL = window.API_URL || '';
+const COLORS = ['#4F46E5','#059669','#DC2626','#D97706','#7C3AED','#DB2777','#0284C7','#65A30D'];
+const DAY_NAMES = ['Yak','Du','Se','Cho','Pay','Jum','Shan'];
+const LANG = {uz:{app:'Davomat Jurnali',groups:'Guruhlar',students:'O\'quvchilar',add:'Qo\'shish',search:'Qidirish',edit:'Tahrirlash',delete:'O\'chirish',save:'Saqlash',cancel:'Bekor qilish',close:'Yopish',present:'Keldi',absent:'Kelmadi',late:'Kechikdi',excused:'Sababli',allPresent:'Hammasi keldi',allAbsent:'Hammasi kelmadi',allLate:'Hammasi kechikdi',allExcused:'Hammasi sababli',clear:'Tozalash',sort:'Saralash',name:'Ism',date:'Sana',stats:'Statistika',ranking:'Reyting',worstDays:'Eng yomon kunlar',chart:'Grafik',export:'Export',import:'Import',print:'Chop etish',theme:'Tema',more:'Ko\'proq',logout:'Chiqish',login:'Kirish',noData:'Ma\'lumot yo\'q',loading:'Yuklanmoqda...',error:'Xatolik',success:'Muvaffaqiyatli',today:'Bugun',monthly:'Oylik hisobot',qr:'QR kod',photo:'Rasm',upload:'Yuklash',saveAttendance:'Davomatni saqlash',studentCount:'o\'quvchi',groupCount:'guruh',dayCount:'kun',total:'Jami',overall:'Umumiy',confirm:'Tasdiqlaysizmi?',searchStudents:'O\'quvchilarni qidirish',searchGroups:'Guruhlarni qidirish',addGroup:'Guruh qo\'shish',addStudent:'O\'quvchi qo\'shish',groupName:'Guruh nomi',studentName:'O\'quvchi ismi'},
+  en:{app:'Attendance Journal',groups:'Groups',students:'Students',add:'Add',search:'Search',edit:'Edit',delete:'Delete',save:'Save',cancel:'Cancel',close:'Close',present:'Present',absent:'Absent',late:'Late',excused:'Excused',allPresent:'All present',allAbsent:'All absent',allLate:'All late',allExcused:'All excused',clear:'Clear',sort:'Sort',name:'Name',date:'Date',stats:'Statistics',ranking:'Ranking',worstDays:'Worst days',chart:'Chart',export:'Export',import:'Import',print:'Print',theme:'Theme',more:'More',logout:'Logout',login:'Login',noData:'No data',loading:'Loading...',error:'Error',success:'Success',today:'Today',monthly:'Monthly report',qr:'QR code',photo:'Photo',upload:'Upload',saveAttendance:'Save attendance',studentCount:'students',groupCount:'groups',dayCount:'days',total:'Total',overall:'Overall',confirm:'Are you sure?',searchStudents:'Search students',searchGroups:'Search groups',addGroup:'Add group',addStudent:'Add student',groupName:'Group name',studentName:'Student name'},
+  ru:{app:'Журнал посещаемости',groups:'Группы',students:'Студенты',add:'Добавить',search:'Поиск',edit:'Редактировать',delete:'Удалить',save:'Сохранить',cancel:'Отмена',close:'Закрыть',present:'Пришёл',absent:'Не пришёл',late:'Опоздал',excused:'Уважительно',allPresent:'Все пришли',allAbsent:'Все не пришли',allLate:'Все опоздали',allExcused:'Все уважительно',clear:'Очистить',sort:'Сортировка',name:'Имя',date:'Дата',stats:'Статистика',ranking:'Рейтинг',worstDays:'Худшие дни',chart:'График',export:'Экспорт',import:'Импорт',print:'Печать',theme:'Тема',more:'Ещё',logout:'Выйти',login:'Войти',noData:'Нет данных',loading:'Загрузка...',error:'Ошибка',success:'Успешно',today:'Сегодня',monthly:'Месячный отчёт',qr:'QR код',photo:'Фото',upload:'Загрузить',saveAttendance:'Сохранить посещаемость',studentCount:'студентов',groupCount:'групп',dayCount:'дней',total:'Всего',overall:'Общий',confirm:'Вы уверены?',searchStudents:'Поиск студентов',searchGroups:'Поиск групп',addGroup:'Добавить группу',addStudent:'Добавить студента',groupName:'Название группы',studentName:'Имя студента'}};
+let _lang = localStorage.getItem('davomatLang') || 'uz';
+function __(k){return LANG[_lang]?.[k]||k;}
+let ws = null;
+function connectWs(){
+  try{
+    const apiHost = API_URL ? API_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') : location.host;
+    const protocol = (API_URL && API_URL.startsWith('https')) || (!API_URL && location.protocol === 'https:') ? 'wss' : 'ws';
+    ws=new WebSocket(`${protocol}://${apiHost}/ws`);
+    ws.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='attendance_update'&&currentGroupId)renderGroup()}catch(_){}};
+    ws.onclose=()=>setTimeout(connectWs,3000)
+  }catch(_){}
+}
+let currentGroupId = null, currentDate = '', editTarget = null, statsData = null, profileStudentId = null;
+let studentSortBy = 'name', groupSearchTerm = '', studentSearchTerm = '', attendanceFilter = 'all';
+let importData = null, copiedAttendance = null, multiSelectMode = false, selectedStudents = new Set();
+let undoStack = [], touchStartY = 0, ptrActive = false, heatmapData = null;
+
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getFirstOfMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function esc(str) {
+  const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+}
+function avatarColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h) + name.charCodeAt(i);
+  return COLORS[Math.abs(h) % COLORS.length];
+}
+function avatarLetter(name) {
+  return name.trim().charAt(0).toUpperCase();
+}
+
+async function api(path, opts = {}) {
+  const h = { 'Content-Type': 'application/json', ...opts.headers };
+  const res = await fetch(`${API_URL}${path}`, { ...opts, headers: h });
+  const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
+  if (!res.ok) throw new Error(data.error || 'Xatolik');
+  return data;
+}
+
+function toast(msg, type, undoCallback) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  let html = `<span class="toast-icon">${type === 'success' ? '&#10003;' : type === 'error' ? '&#10007;' : '&#8505;'}</span> ${msg}`;
+  if (undoCallback) html += `<button class="undo-btn">Bekor qilish</button>`;
+  t.innerHTML = html;
+  c.appendChild(t);
+  if (undoCallback) t.querySelector('.undo-btn').onclick = () => { undoCallback(); t.remove(); };
+  setTimeout(() => { t.style.animation = 'fadeOut .3s ease forwards'; setTimeout(() => t.remove(), 300); }, undoCallback ? 4000 : 2500);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function goHome() {
+  currentGroupId = null;
+  multiSelectMode = false; selectedStudents.clear();
+  document.getElementById('backBtn').classList.add('hidden');
+  document.getElementById('statsBtn').classList.add('hidden');
+  document.getElementById('multiSelectToggle').classList.add('hidden');
+  document.getElementById('headerTitle').textContent = 'Davomat Jurnali';
+  showPage('pageHome');
+  renderHome();
+}
+
+function goToGroup(id) {
+  currentGroupId = id;
+  multiSelectMode = false; selectedStudents.clear();
+  document.getElementById('backBtn').classList.remove('hidden');
+  document.getElementById('statsBtn').classList.remove('hidden');
+  document.getElementById('multiSelectToggle').classList.remove('hidden');
+  currentDate = getToday();
+  document.getElementById('dateInput').value = currentDate;
+  studentSortBy = 'name';
+  document.getElementById('sortSelect').value = 'name';
+  attendanceFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'all'));
+  showPage('pageGroup');
+  renderGroup();
+}
+
+// Theme
+function initTheme() {
+  if (localStorage.getItem('davomatTheme') === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('themeToggle').textContent = '\u2600\uFE0F';
+  }
+}
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const dk = document.body.classList.contains('dark');
+  localStorage.setItem('davomatTheme', dk ? 'dark' : 'light');
+  document.getElementById('themeToggle').textContent = dk ? '\u2600\uFE0F' : '\uD83C\uDF19';
+}
+
+// Favorites
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem('davomatFavs') || '[]'); } catch(_) { return []; }
+}
+function setFavorites(favs) {
+  localStorage.setItem('davomatFavs', JSON.stringify(favs));
+}
+function toggleFavorite(id) {
+  let favs = getFavorites();
+  if (favs.includes(id)) favs = favs.filter(f => f !== id);
+  else favs.push(id);
+  setFavorites(favs);
+  renderHome();
+}
+
+// Dashboard
+async function renderDashboard() {
+  const c = document.getElementById('dashboardContainer');
+  try {
+    const d = await api('/api/dashboard');
+    if (d.totalGroups === 0) { c.innerHTML = ''; return; }
+    let mini = '';
+    const gl = d.groups || [];
+    gl.forEach(g => {
+      const pct = g.day_count > 0 ? Math.round((g.attendance_count / (g.student_count * g.day_count)) * 100) : 0;
+      const pc = pct >= 70 ? 'good' : pct >= 40 ? 'ok' : 'bad';
+      mini += `<div class="group-mini-chart"><span style="font-size:.78rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.name)}</span><div class="group-mini-bar"><div class="group-mini-fill ${pc}" style="width:${pct}%"></div></div><span class="group-mini-pct" style="color:var(--${pc==='good'?'success':pc==='ok'?'warning':'danger'})">${pct}%</span></div>`;
+    });
+    c.innerHTML = `<div class="dashboard-stats"><div class="stat-box primary"><div class="stat-num">${d.totalGroups}</div><div class="stat-label">Guruhlar</div></div><div class="stat-box good"><div class="stat-num">${d.totalStudents}</div><div class="stat-label">O'quvchilar</div></div><div class="stat-box ok"><div class="stat-num">${d.totalAttendance}</div><div class="stat-label">Yozuvlar</div></div></div><div class="card mt-2"><div class="section-title">Guruhlar bo'yicha davomat</div>${mini}</div>`;
+  } catch(_) { c.innerHTML = ''; }
+}
+
+// Home
+async function renderHome() {
+  const c = document.getElementById('groupsContainer'), e = document.getElementById('emptyGroups');
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const groups = await api('/api/groups');
+    const f = groupSearchTerm ? groups.filter(g => g.name.toLowerCase().includes(groupSearchTerm.toLowerCase())) : groups;
+    document.getElementById('groupCount').textContent = `(${f.length}/${groups.length})`;
+    if (f.length === 0) { c.innerHTML = ''; c.appendChild(e); return; }
+    const favs = getFavorites();
+    const sorted = [...f].sort((a,b) => {
+      const af = favs.includes(a.id) ? 0 : 1, bf = favs.includes(b.id) ? 0 : 1;
+      return af - bf;
+    });
+    c.innerHTML = '<div class="groups-grid"></div>';
+    const grid = c.querySelector('.groups-grid');
+    sorted.forEach(g => {
+      const isFav = favs.includes(g.id);
+      const card = document.createElement('div'); card.className = 'group-card';
+      card.innerHTML = `<button class="fav-btn${isFav?' active':''}" data-gid="${g.id}">${isFav?'&#11088;':'&#9734;'}</button><div class="group-card-left" data-gid="${g.id}"><h3>${esc(g.name)}</h3><p>${g.student_count} o'quvchi</p></div><div class="card-actions"><button class="card-btn edit-group" data-gid="${g.id}" title="Tahrirlash">&#9998;</button><button class="card-btn danger delete-group" data-gid="${g.id}" title="O'chirish">&times;</button></div>`;
+      card.querySelector('.fav-btn').onclick = e => { e.stopPropagation(); toggleFavorite(g.id); };
+      card.querySelector('.group-card-left').onclick = () => goToGroup(g.id);
+      card.querySelector('.edit-group').onclick = e => { e.stopPropagation(); openEdit('Guruh nomini tahrirlash', g.name, {type:'group',id:g.id}); };
+      card.querySelector('.delete-group').onclick = e => { e.stopPropagation(); deleteGroup(g.id,g.name); };
+      grid.appendChild(card);
+    });
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">&#9888; ${esc(e.message)}</p></div>`; }
+}
+
+async function addGroup() {
+  const i = document.getElementById('groupNameInput'), name = i.value.trim();
+  if (!name) { toast('Guruh nomini kiriting!','error'); i.focus(); return; }
+  try { await api('/api/groups',{method:'POST',body:JSON.stringify({name})}); i.value=''; i.focus(); await Promise.all([renderHome(),renderDashboard()]); toast(`"${name}" yaratildi`,'success'); } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteGroup(id,name) {
+  if (!confirm(`"${name}" guruhini o'chirish?`)) return;
+  try { await api(`/api/groups/${id}`,{method:'DELETE'}); await Promise.all([renderHome(),renderDashboard()]); toast(`"${name}" o'chirildi`,'success'); } catch(e) { toast(e.message,'error'); }
+}
+
+async function editGroup(id,n) {
+  try { await api(`/api/groups/${id}`,{method:'PUT',body:JSON.stringify({name:n})}); await renderHome(); toast('O\'zgartirildi','success'); } catch(e) { toast(e.message,'error'); }
+}
+
+// Auto-save attendance
+let pendingSaves = 0;
+async function toggleAttendance(sid, status) {
+  const prevBtn = document.querySelector(`.att-btn.present[data-sid="${sid}"],.att-btn.absent[data-sid="${sid}"],.att-btn.late[data-sid="${sid}"],.att-btn.excused[data-sid="${sid}"]`);
+  const prevStatus = prevBtn ? prevBtn.dataset.action : null;
+  const time = status === 'late' ? nowTime() : null;
+  const timeInput = document.querySelector(`.time-input[data-sid="${sid}"]`);
+  const finalTime = timeInput && status === 'late' ? timeInput.value : time;
+
+  const btn = document.querySelector(`.att-btn[data-action="${status}"][data-sid="${sid}"]`);
+  if (btn && btn.classList.contains(status)) {
+    // Toggle off
+    try {
+      await api('/api/attendance', {method:'DELETE', body:JSON.stringify({studentId:sid,date:currentDate})});
+      btn.className = `att-btn ${status}`;
+      const ti = document.querySelector(`.time-input[data-sid="${sid}"]`);
+      if (ti) ti.remove();
+      undoStack.push({type:'attendance',sid,prevStatus,date:currentDate});
+      toast('Bekor qilindi','info', () => redoAttendance(sid, prevStatus, currentDate));
+    } catch(e) { toast(e.message,'error'); }
+    return;
+  }
+
+  try {
+    await api('/api/attendance', {method:'PUT', body:JSON.stringify({studentId:sid,date:currentDate,status,time:finalTime})});
+    document.querySelectorAll(`.att-btn[data-sid="${sid}"]`).forEach(b => b.className = `att-btn${b.dataset.action === status ? ` ${status}` : ''}`);
+    if (status === 'late' && !document.querySelector(`.time-input[data-sid="${sid}"]`)) {
+      const ti = document.createElement('input');
+      ti.type = 'time'; ti.className = 'time-input'; ti.dataset.sid = sid; ti.value = finalTime || nowTime();
+      ti.onchange = () => setLateTime(sid, ti.value);
+      document.querySelector(`.att-btn[data-action="late"][data-sid="${sid}"]`).after(ti);
+    } else if (status !== 'late') {
+      const ti = document.querySelector(`.time-input[data-sid="${sid}"]`);
+      if (ti) ti.remove();
+    }
+    const statusLabels = {present:'Keldi',absent:'Kelmadi',late:'Kechikdi',excused:'Sababli'};
+    undoStack.push({type:'attendance',sid,prevStatus,date:currentDate});
+    toast(`${statusLabels[status]}: belgilandi`,'success', () => redoAttendance(sid, prevStatus, currentDate));
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function redoAttendance(sid, status, date) {
+  if (status) {
+    const time = status === 'late' ? nowTime() : null;
+    await api('/api/attendance', {method:'PUT', body:JSON.stringify({studentId:sid,date,status,time})});
+  } else {
+    await api('/api/attendance', {method:'DELETE', body:JSON.stringify({studentId:sid,date})});
+  }
+  renderGroup();
+}
+
+async function setLateTime(sid, time) {
+  try { await api('/api/attendance', {method:'PUT', body:JSON.stringify({studentId:sid,date:currentDate,status:'late',time})}); } catch(e) {}
+}
+
+// Group render
+async function renderGroup() {
+  const c = document.getElementById('studentsContainer'), e = document.getElementById('emptyStudents');
+  document.getElementById('headerTitle').textContent = 'Yuklanmoqda...';
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const [groups, students] = await Promise.all([api('/api/groups'), api(`/api/groups/${currentGroupId}/students?date=${currentDate}`)]);
+    const group = groups.find(g => g.id === currentGroupId);
+    if (!group) { toast('Guruh topilmadi','error'); goHome(); return; }
+    document.getElementById('headerTitle').textContent = group.name;
+    let f = studentSearchTerm ? students.filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase())) : [...students];
+    if (attendanceFilter !== 'all') f = f.filter(s => (s.attendance || 'none') === attendanceFilter);
+    if (studentSortBy === 'present') f.sort((a,b) => (a.attendance==='present'?0:1)-(b.attendance==='present'?0:1));
+    else if (studentSortBy === 'absent') f.sort((a,b) => (a.attendance==='absent'?0:1)-(b.attendance==='absent'?0:1));
+    else if (studentSortBy === 'late') f.sort((a,b) => (a.attendance==='late'?0:1)-(b.attendance==='late'?0:1));
+    else f.sort((a,b) => a.name.localeCompare(b.name));
+    document.getElementById('studentCount').textContent = `${f.length}/${students.length}`;
+    if (f.length === 0) { c.innerHTML = ''; c.appendChild(e); return; }
+    c.innerHTML = '<div class="student-list"></div>';
+    const list = c.querySelector('.student-list');
+    f.forEach((s, idx) => {
+      const item = document.createElement('div'); item.className = 'student-item';
+      item.style.animationDelay = `${idx * 0.03}s`;
+      item.draggable = true;
+      const a = s.attendance, at = s.attendanceTime;
+      const isSelected = selectedStudents.has(s.id);
+      const avColor = avatarColor(s.name);
+      const avLetter = avatarLetter(s.name);
+      const multiHtml = multiSelectMode ? `<div class="select-checkbox${isSelected?' checked':''}" data-sid="${s.id}">${isSelected?'&#10003;':''}</div>` : '';
+      item.innerHTML = `${multiHtml}<span class="drag-handle" title="Tartib">&#9776;</span><span class="student-avatar" style="background:${avColor}">${avLetter}</span><span class="student-name" data-sid="${s.id}">${esc(s.name)}</span><div class="student-controls">
+        <button class="att-btn${a==='present'?' present':''}" data-action="present" data-sid="${s.id}">Keldi</button>
+        <button class="att-btn${a==='late'?' late':''}" data-action="late" data-sid="${s.id}">Kech</button>
+        <button class="att-btn${a==='excused'?' excused':''}" data-action="excused" data-sid="${s.id}">Sabab</button>
+        <button class="att-btn${a==='absent'?' absent':''}" data-action="absent" data-sid="${s.id}">Kelm</button>
+        ${a==='late'?`<input type="time" class="time-input" data-sid="${s.id}" value="${at||nowTime()}">`:''}
+        <span style="display:inline-flex;gap:2px">
+          <button class="card-btn edit-student" data-sid="${s.id}" style="background:0;border:0;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.85rem;color:var(--text-muted)" title="Tahrirlash">&#9998;</button>
+          <button class="card-btn danger delete-student" data-sid="${s.id}" style="background:0;border:0;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.95rem;color:var(--text-muted)" title="O'chirish">&times;</button>
+        </span>
+      </div>`;
+      if (multiSelectMode) {
+        item.querySelector('.select-checkbox').onclick = e => {
+          e.stopPropagation();
+          if (selectedStudents.has(s.id)) selectedStudents.delete(s.id);
+          else selectedStudents.add(s.id);
+          renderGroup();
+        };
+      }
+      item.querySelectorAll('.att-btn').forEach(b => b.onclick = () => toggleAttendance(s.id,b.dataset.action));
+      item.querySelector('.student-name').onclick = () => openHistory(s.id);
+      item.querySelector('.edit-student').onclick = () => openEdit('O\'quvchi ismini tahrirlash', s.name, {type:'student',id:s.id});
+      item.querySelector('.delete-student').onclick = () => deleteStudent(s.id);
+      const ti = item.querySelector('.time-input');
+      if (ti) ti.onchange = () => setLateTime(s.id, ti.value);
+      // Drag and drop
+      item.ondragstart = e => {
+        e.dataTransfer.setData('text/plain', s.id);
+        item.classList.add('dragging');
+      };
+      item.ondragend = () => item.classList.remove('dragging');
+      item.ondragover = e => { e.preventDefault(); item.classList.add('drag-over'); };
+      item.ondragleave = () => item.classList.remove('drag-over');
+      item.ondrop = e => {
+        e.preventDefault(); item.classList.remove('drag-over');
+        const fromId = e.dataTransfer.getData('text/plain');
+        if (fromId !== s.id) reorderStudent(fromId, s.id);
+      };
+      list.appendChild(item);
+    });
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">&#9888; ${esc(e.message)}</p></div>`; }
+}
+
+async function reorderStudent(fromId, toId) {
+  try {
+    const students = await api(`/api/groups/${currentGroupId}/students?date=${currentDate}`);
+    const fromIdx = students.findIndex(s => s.id === fromId);
+    const toIdx = students.findIndex(s => s.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const reordered = [...students];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    for (let i = 0; i < reordered.length; i++) {
+      await api(`/api/groups/${currentGroupId}/students/${reordered[i].id}`, {method:'PUT', body:JSON.stringify({sort_order:i})});
+    }
+    renderGroup();
+    toast('Tartib o\'zgartirildi','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function addStudent() {
+  const i = document.getElementById('studentNameInput'), name = i.value.trim();
+  if (!name) { toast('Ism kiriting!','error'); i.focus(); return; }
+  try { await api(`/api/groups/${currentGroupId}/students`,{method:'POST',body:JSON.stringify({name})}); i.value=''; i.focus(); await renderGroup(); toast(`"${name}" qo'shildi`,'success'); } catch(e) { toast(e.message,'error'); }
+}
+
+async function editStudent(id,n) {
+  try { await api(`/api/groups/${currentGroupId}/students/${id}`,{method:'PUT',body:JSON.stringify({name:n})}); await renderGroup(); toast('O\'zgartirildi','success'); } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteStudent(id) {
+  if (!confirm('O\'quvchini o\'chirish?')) return;
+  try { await api(`/api/groups/${currentGroupId}/students/${id}`,{method:'DELETE'}); await renderGroup(); toast('O\'chirildi','success'); } catch(e) { toast(e.message,'error'); }
+}
+
+async function bulkMark(status) {
+  let targets;
+  if (multiSelectMode && selectedStudents.size > 0) {
+    targets = [...selectedStudents];
+  } else {
+    try {
+      const students = await api(`/api/groups/${currentGroupId}/students?date=${currentDate}`);
+      targets = students.map(s => s.id);
+    } catch(e) { toast(e.message,'error'); return; }
+  }
+  const time = status === 'late' ? nowTime() : null;
+  try {
+    for (const sid of targets) {
+      await api('/api/attendance',{method:'PUT',body:JSON.stringify({studentId:sid,date:currentDate,status,time})});
+    }
+    await renderGroup();
+    if (multiSelectMode) { selectedStudents.clear(); multiSelectMode = false; document.getElementById('multiSelectToggle').classList.remove('active'); }
+    toast(`${targets.length} ta belgilandi`,'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function clearAll() {
+  let targets;
+  if (multiSelectMode && selectedStudents.size > 0) {
+    targets = [...selectedStudents];
+  } else {
+    try {
+      const students = await api(`/api/groups/${currentGroupId}/students?date=${currentDate}`);
+      targets = students.filter(s => s.attendance).map(s => s.id);
+    } catch(e) { toast(e.message,'error'); return; }
+  }
+  try {
+    for (const sid of targets) {
+      await api('/api/attendance',{method:'DELETE',body:JSON.stringify({studentId:sid,date:currentDate})});
+    }
+    await renderGroup();
+    if (multiSelectMode) { selectedStudents.clear(); multiSelectMode = false; document.getElementById('multiSelectToggle').classList.remove('active'); }
+    toast('Tozalandi','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// Copy/Paste attendance
+async function copyAttendance() {
+  try {
+    const students = await api(`/api/groups/${currentGroupId}/students?date=${currentDate}`);
+    copiedAttendance = {};
+    students.forEach(s => { if (s.attendance) copiedAttendance[s.id] = s.attendance; });
+    toast(`${Object.keys(copiedAttendance).length} ta holat nusxalandi`,'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+async function pasteAttendance() {
+  if (!copiedAttendance || Object.keys(copiedAttendance).length === 0) { toast('Avval nusxa oling','error'); return; }
+  if (!confirm(`${Object.keys(copiedAttendance).length} ta holatni ${currentDate} ga qo'yish?`)) return;
+  try {
+    for (const [sid, status] of Object.entries(copiedAttendance)) {
+      const time = status === 'late' ? nowTime() : null;
+      await api('/api/attendance',{method:'PUT',body:JSON.stringify({studentId:sid,date:currentDate,status,time})});
+    }
+    await renderGroup();
+    toast('Qo\'yildi','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// Student profile
+async function openProfile(sid) {
+  profileStudentId = sid;
+  document.getElementById('profileModalTitle').textContent = 'O\'quvchi profili';
+  document.getElementById('profilePhone').value = '';
+  document.getElementById('profileAddress').value = '';
+  document.getElementById('profileParentName').value = '';
+  document.getElementById('profileParentPhone').value = '';
+  document.getElementById('profileNotes').value = '';
+  try {
+    const p = await api(`/api/students/${sid}/profile`).catch(()=>null);
+    if (p) {
+      document.getElementById('profilePhone').value = p.phone || '';
+      document.getElementById('profileAddress').value = p.address || '';
+      document.getElementById('profileParentName').value = p.parent_name || '';
+      document.getElementById('profileParentPhone').value = p.parent_phone || '';
+      document.getElementById('profileNotes').value = p.notes || '';
+      document.getElementById('profileModalTitle').textContent = `${p.name} — profili`;
+    }
+  } catch(_) {}
+  document.getElementById('profileModal').classList.remove('hidden');
+}
+async function saveProfile() {
+  if (!profileStudentId) return;
+  try {
+    await api(`/api/students/${profileStudentId}/profile`, {method:'PUT', body:JSON.stringify({
+      phone: document.getElementById('profilePhone').value.trim() || null,
+      address: document.getElementById('profileAddress').value.trim() || null,
+      parent_name: document.getElementById('profileParentName').value.trim() || null,
+      parent_phone: document.getElementById('profileParentPhone').value.trim() || null,
+      notes: document.getElementById('profileNotes').value.trim() || null
+    })});
+    document.getElementById('profileModal').classList.add('hidden');
+    toast('Profil saqlandi','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// Import
+function openImport() {
+  document.getElementById('importModal').classList.remove('hidden');
+  document.getElementById('importText').value = '';
+  document.getElementById('importPreview').textContent = '';
+  importData = null;
+}
+function parseImportText(text) {
+  return text.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+}
+function updateImportPreview() {
+  const names = parseImportText(document.getElementById('importText').value);
+  document.getElementById('importPreview').textContent = names.length > 0 ? `${names.length} ta o'quvchi topildi: ${names.slice(0,5).join(', ')}${names.length>5?', ...':''}` : '';
+  importData = names;
+}
+async function doImport() {
+  if (!importData || importData.length === 0) { toast('O\'quvchilar ro\'yxatini kiriting','error'); return; }
+  try {
+    const r = await api(`/api/groups/${currentGroupId}/students/import`, {method:'POST',body:JSON.stringify({students:importData})});
+    document.getElementById('importModal').classList.add('hidden');
+    await renderGroup();
+    await renderDashboard();
+    toast(`${r.added} ta o'quvchi import qilindi`,'success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+// History
+async function openHistory(sid) {
+  document.getElementById('historyModal').classList.remove('hidden');
+  document.getElementById('historyModalTitle').textContent = 'Yuklanmoqda...';
+  document.getElementById('historyContent').innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  document.getElementById('historySummary').innerHTML = '';
+  document.getElementById('studentProfileInfo').style.display = 'none';
+  document.getElementById('editProfileFromHistoryBtn').style.display = 'none';
+  try {
+    const [d, profile] = await Promise.all([api(`/api/students/${sid}/history`), api(`/api/students/${sid}/profile`).catch(()=>null)]);
+    document.getElementById('historyModalTitle').textContent = `${esc(d.name)} — ${esc(d.groupName)}`;
+    if (profile && (profile.phone || profile.parent_name || profile.address)) {
+      let info = '';
+      if (profile.phone) info += `\uD83D\uDCF1 ${esc(profile.phone)} `;
+      if (profile.parent_name) info += `\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67 ${esc(profile.parent_name)} `;
+      if (profile.parent_phone) info += `\uD83D\uDCF1 ${esc(profile.parent_phone)} `;
+      if (profile.address) info += `\uD83C\uDFE0 ${esc(profile.address)}`;
+      const el = document.getElementById('studentProfileInfo');
+      el.textContent = info; el.style.display = 'block';
+    }
+    document.getElementById('editProfileFromHistoryBtn').style.display = 'block';
+    document.getElementById('editProfileFromHistoryBtn').onclick = () => { document.getElementById('historyModal').classList.add('hidden'); openProfile(sid); };
+    const pc = d.percentage >= 70 ? 'good' : d.percentage >= 40 ? 'ok' : 'bad';
+    document.getElementById('historySummary').innerHTML = `
+      <div class="stat-box ${pc}"><div class="stat-num">${d.percentage}%</div><div class="stat-label">Davomat</div></div>
+      <div class="stat-box good"><div class="stat-num">${d.present}</div><div class="stat-label">Keldi</div></div>
+      <div class="stat-box info"><div class="stat-num">${d.late||0}</div><div class="stat-label">Kech</div></div>
+      <div class="stat-box ok"><div class="stat-num">${d.excused||0}</div><div class="stat-label">Sabab</div></div>
+      <div class="stat-box bad"><div class="stat-num">${d.absent}</div><div class="stat-label">Kelmadi</div></div>`;
+    if (d.records.length === 0) { document.getElementById('historyContent').innerHTML = '<div class="empty-state"><p>Davomat yo\'q</p></div>'; return; }
+    const c = document.getElementById('historyContent');
+    c.innerHTML = '<div class="history-grid"></div>';
+    const grid = c.querySelector('.history-grid');
+    d.records.forEach(r => {
+      const day = document.createElement('div');
+      day.className = `history-day ${r.status}`;
+      day.title = `${r.date} — ${r.status === 'present' ? 'Kelgan' : r.status === 'absent' ? 'Kelmagan' : r.status === 'late' ? 'Kechikkan' : 'Sababli'}${r.time ? ' '+r.time : ''}`;
+      const dt = new Date(r.date+'T00:00:00');
+      day.textContent = dt.getDate();
+      day.onclick = () => { document.getElementById('historyModal').classList.add('hidden'); openMonthly(sid); };
+      grid.appendChild(day);
+    });
+    const cap = document.createElement('div'); cap.className = 'history-caption';
+    const statuses = [['Keldi',d.present,'var(--success-bg)','var(--success)'],['Kech',d.late||0,'var(--warning-bg)','var(--warning)'],['Sabab',d.excused||0,'var(--info-bg)','var(--info)'],['Kelmadi',d.absent,'var(--danger-bg)','var(--danger)']];
+    cap.innerHTML = statuses.map(([l,v, bg,bc]) => v > 0 ? `<span><span class="dot" style="background:${bg};border:1px solid ${bc}"></span> ${l} (${v})</span>` : '').join('');
+    c.appendChild(cap);
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-outline btn-sm mt-2';
+    btn.textContent = '\uD83D\uDCC5 Oylik hisobot';
+    btn.onclick = () => openMonthly(sid);
+    c.appendChild(btn);
+  } catch(e) { document.getElementById('historyContent').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">&#9888; ${esc(e.message)}</p></div>`; }
+  }
+
+// Monthly
+async function openMonthly(sid) {
+  document.getElementById('monthlyModal').classList.remove('hidden');
+  document.getElementById('monthlyModalTitle').textContent = 'Yuklanmoqda...';
+  document.getElementById('monthlyContent').innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const d = await api(`/api/students/${sid}/monthly`);
+    document.getElementById('monthlyModalTitle').textContent = `${esc(d.name)} — oylik hisobot`;
+    const c = document.getElementById('monthlyContent');
+    if (d.report.length === 0) { c.innerHTML = '<div class="empty-state"><p>Ma\'lumot yo\'q</p></div>'; return; }
+    c.innerHTML = '<div class="stats-grid"></div>';
+    const grid = c.querySelector('.stats-grid');
+    d.report.forEach(r => {
+      const pc = r.percentage >= 70 ? 'good' : r.percentage >= 40 ? 'ok' : 'bad';
+      const row = document.createElement('div'); row.className = 'stats-row';
+      const [y,m] = r.month.split('-');
+      const months = ['','Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+      row.innerHTML = `<span class="stats-name" style="min-width:80px">${months[parseInt(m)]} ${y}</span>
+        <span class="badge badge-success">${r.present}</span>
+        <span class="badge badge-warning">${r.late||0}</span>
+        <span class="badge badge-info">${r.excused||0}</span>
+        <span class="badge badge-danger">${r.absent}</span>
+        <span class="stats-pct" style="color:var(--${pc==='good'?'success':pc==='ok'?'warning':'danger'})">${r.percentage}%</span>
+        <div class="progress-bar" style="flex:1;min-width:40px"><div class="fill ${pc}" style="width:${r.percentage}%"></div></div>`;
+      grid.appendChild(row);
+    });
+  } catch(e) { document.getElementById('monthlyContent').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${esc(e.message)}</p></div>`; }
+  }
+
+// Stats
+let statsFrom = '', statsTo = '', trendChart = null;
+
+async function openStats() {
+  document.getElementById('statsModal').classList.remove('hidden');
+  switchTab('stats');
+  statsFrom = getFirstOfMonth(); statsTo = getToday();
+  document.getElementById('statsFrom').value = statsFrom; document.getElementById('statsTo').value = statsTo;
+  await loadStats();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.stab === name));
+  ['stats','ranking','worst','chart','heatmap'].forEach(id => document.getElementById(id+'TabContent').classList.toggle('hidden', id !== name));
+  if (name === 'ranking') loadRanking();
+  if (name === 'worst') loadWorst();
+  if (name === 'chart') loadChart();
+  if (name === 'heatmap') loadHeatmap();
+}
+
+async function loadStats() {
+  const c = document.getElementById('statsContent');
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const q = statsFrom && statsTo ? `?from=${statsFrom}&to=${statsTo}` : '';
+    statsData = await api(`/api/groups/${currentGroupId}/stats${q}`);
+    renderStats(statsData);
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">&#9888; ${esc(e.message)}</p></div>`; }
+}
+
+function renderStats(d) {
+  document.getElementById('statsModalTitle').textContent = `${esc(d.groupName)} — statistika`;
+  const tp = d.stats.reduce((s,st) => s+st.present,0);
+  const ta = d.stats.reduce((s,st) => s+st.absent,0);
+  const tl = d.stats.reduce((s,st) => s+(st.late||0),0);
+  const te = d.stats.reduce((s,st) => s+(st.excused||0),0);
+  const tr = d.stats.reduce((s,st) => s+st.total,0);
+  const op = tr > 0 ? Math.round(((tp+tl)/tr)*100) : 0;
+  const pc = op >= 70 ? 'good' : op >= 40 ? 'ok' : 'bad';
+  document.getElementById('statsSummary').innerHTML =
+    `<div class="stat-box primary"><div class="stat-num">${d.totalDates}</div><div class="stat-label">Kunlar</div></div>
+    <div class="stat-box ${pc}"><div class="stat-num">${op}%</div><div class="stat-label">Umumiy</div></div>
+    <div class="stat-box good"><div class="stat-num">${tp}</div><div class="stat-label">Keldi</div></div>
+    <div class="stat-box info"><div class="stat-num">${tl}</div><div class="stat-label">Kech</div></div>
+    <div class="stat-box ok"><div class="stat-num">${te}</div><div class="stat-label">Sabab</div></div>
+    <div class="stat-box bad"><div class="stat-num">${ta}</div><div class="stat-label">Kelmadi</div></div>`;
+  const c = document.getElementById('statsContent');
+  const sorted = [...d.stats].sort((a,b) => a.percentage - b.percentage);
+  c.innerHTML = '<div class="stats-grid"></div>';
+  const grid = c.querySelector('.stats-grid');
+  sorted.forEach(st => {
+    const p = st.percentage >= 70 ? 'good' : st.percentage >= 40 ? 'ok' : 'bad';
+    const row = document.createElement('div'); row.className = 'stats-row';
+    row.innerHTML = `<span class="stats-name" data-sid="${st.id}">${esc(st.name)}</span>
+      <span class="badge badge-success">${st.present}</span>
+      <span class="badge badge-warning">${st.late||0}</span>
+      <span class="badge badge-info">${st.excused||0}</span>
+      <span class="badge badge-danger">${st.absent}</span>
+      <span class="stats-pct" style="color:var(--${p==='good'?'success':p==='ok'?'warning':'danger'})">${st.percentage}%</span>
+      <div class="progress-bar" style="flex:1;min-width:40px"><div class="fill ${p}" style="width:${st.percentage}%"></div></div>`;
+    row.querySelector('.stats-name').onclick = () => { document.getElementById('statsModal').classList.add('hidden'); openHistory(st.id); };
+    grid.appendChild(row);
+  });
+}
+
+async function loadRanking() {
+  const c = document.getElementById('rankingContent');
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const q = statsFrom && statsTo ? `?from=${statsFrom}&to=${statsTo}` : '';
+    const d = await api(`/api/groups/${currentGroupId}/ranking${q}`);
+    if (d.ranking.length === 0) { c.innerHTML = '<div class="empty-state"><p>Ma\'lumot yo\'q</p></div>'; return; }
+    c.innerHTML = '<div class="rank-list"></div>';
+    const list = c.querySelector('.rank-list');
+    d.ranking.forEach((r,i) => {
+      const pc = r.score >= 70 ? 'good' : r.score >= 40 ? 'ok' : 'bad';
+      const div = document.createElement('div'); div.className = 'rank-item';
+      div.innerHTML = `<div class="rank-num">${i+1}</div><span class="rank-name">${esc(r.name)}</span><span class="text-sm text-secondary">${r.present}/${r.total}</span><span class="rank-score ${pc}">${r.score}%</span>`;
+      list.appendChild(div);
+    });
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${esc(e.message)}</p></div>`; }
+  }
+
+async function loadWorst() {
+  const c = document.getElementById('worstContent');
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const d = await api(`/api/groups/${currentGroupId}/worst-days`);
+    if (d.days.length === 0) { c.innerHTML = '<div class="empty-state"><p>Hech kim kelmagan kun yo\'q</p></div>'; return; }
+    c.innerHTML = '<div class="stats-grid"></div>';
+    const grid = c.querySelector('.stats-grid');
+    d.days.forEach(day => {
+      const row = document.createElement('div'); row.className = 'stats-row';
+      const dt = new Date(day.date+'T00:00:00');
+      row.innerHTML = `<span class="stats-name" style="min-width:80px">${dt.toLocaleDateString('uz-UZ')}</span>
+        <span class="badge badge-success">${day.present_count}</span>
+        <span class="badge badge-danger">${day.absent_count}</span>
+        <span class="text-sm text-secondary">/${day.total}</span>
+        <div class="progress-bar" style="flex:1;min-width:40px"><div class="fill bad" style="width:${Math.round((day.absent_count/day.total)*100)}%"></div></div>`;
+      grid.appendChild(row);
+    });
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${esc(e.message)}</p></div>`; }
+  }
+
+async function loadChart() {
+  const canvas = document.getElementById('trendChart');
+  const parent = canvas.parentElement;
+  canvas.width = parent.clientWidth || 480;
+  canvas.height = parent.clientHeight || 200;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  try {
+    const q = statsFrom && statsTo ? `?from=${statsFrom}&to=${statsTo}` : '';
+    const d = await api(`/api/groups/${currentGroupId}/trend${q}`);
+    if (d.days.length === 0) {
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim() || '#64748B';
+      ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Ma\'lumot yo\'q', canvas.width/2, canvas.height/2);
+      return;
+    }
+    const pad = {top:20,right:16,bottom:30,left:40};
+    const w = canvas.width - pad.left - pad.right, h = canvas.height - pad.top - pad.bottom;
+    const days = d.days;
+    const maxVal = Math.max(...days.map(x => x.total), 1);
+    const isDark = document.body.classList.contains('dark');
+    const textColor = isDark ? '#94A3B8' : '#64748B';
+    ctx.strokeStyle = isDark ? '#334155' : '#E2E8F0'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (h/4)*i;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w+pad.left, y); ctx.stroke();
+      ctx.fillStyle = textColor; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(Math.round(maxVal*(1-i/4)), pad.left-6, y+4);
+    }
+    const stepX = w / Math.max(days.length-1, 1);
+    const colors = {present:'#10B981',late:'#F59E0B',excused:'#3B82F6',absent:'#EF4444'};
+    const drawLine = (key,color) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      days.forEach((day,i) => {
+        const x = pad.left + i*stepX, y = pad.top + h - (day[key]/maxVal)*h;
+        i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    };
+    drawLine('present', colors.present);
+    drawLine('late', colors.late);
+    drawLine('absent', colors.absent);
+    ctx.fillStyle = textColor; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    const step = Math.max(1, Math.floor(days.length/8));
+    days.forEach((day,i) => {
+      if (i % step === 0 || i === days.length-1) {
+        const d = day.date.slice(5);
+        ctx.fillText(d, pad.left + i*stepX, canvas.height-6);
+      }
+    });
+    const legendY = 8;
+    const legendItems = [['Keldi','#10B981'],['Kech','#F59E0B'],['Kelmadi','#EF4444']];
+    let lx = pad.left;
+    legendItems.forEach(([label,clr]) => {
+      ctx.fillStyle = clr; ctx.fillRect(lx, legendY, 10, 10);
+      ctx.fillStyle = textColor; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(label, lx+14, legendY+9);
+      lx += ctx.measureText(label).width + 30;
+    });
+  } catch(e) {
+    ctx.fillStyle = '#EF4444'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Xatolik: '+e.message, canvas.width/2, canvas.height/2);
+  }
+}
+
+// Heatmap
+async function loadHeatmap() {
+  const c = document.getElementById('heatmapContent');
+  c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+  try {
+    const now = new Date();
+    const year = now.getFullYear(), month = now.getMonth() + 1;
+    const d = await api(`/api/groups/${currentGroupId}/calendar?year=${year}&month=${month}`);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDay = new Date(year, month-1, 1).getDay();
+    const attMap = {};
+    d.days.forEach(day => { attMap[parseInt(day.date.split('-')[2])] = day.status; });
+    const statusValues = {present:4,late:3,excused:2,absent:1};
+    c.innerHTML = `<div class="heatmap-wrap"><div class="heatmap-grid">${DAY_NAMES.map((n,i)=>`<div class="heatmap-label">${n}</div>`).join('')}${'<div class="heatmap-label"></div>'.repeat(firstDay)}`;
+    const grid = c.querySelector('.heatmap-grid');
+    for (let day = 1; day <= daysInMonth; day++) {
+      const status = attMap[day];
+      const level = status ? (statusValues[status] || 0) : 0;
+      const cell = document.createElement('div');
+      cell.className = `heatmap-cell level-${level}`;
+      cell.title = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}: ${status || 'belgilanmagan'}`;
+      grid.appendChild(cell);
+    }
+    c.innerHTML += '</div><div style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:.7rem;color:var(--text-muted)"><span>Kam</span><div class="heatmap-cell level-0" style="width:12px;height:12px"></div><div class="heatmap-cell level-1" style="width:12px;height:12px"></div><div class="heatmap-cell level-2" style="width:12px;height:12px"></div><div class="heatmap-cell level-3" style="width:12px;height:12px"></div><div class="heatmap-cell level-4" style="width:12px;height:12px"></div><span>Ko\'p</span></div>';
+  } catch(e) { c.innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${esc(e.message)}</p></div>`; }
+}
+
+function exportCsv() {
+  if (!statsData) return;
+  const rows = [['O\'quvchi','Kelgan','Kechikkan','Sababli','Kelmagan','Jami','Foiz']];
+  statsData.stats.forEach(s => rows.push([s.name,s.present,s.late||0,s.excused||0,s.absent,s.total,s.percentage+'%']));
+  const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = `${statsData.groupName}-statistika.csv`; a.click();
+  toast('CSV yuklandi','success');
+}
+
+// Edit
+function openEdit(title, val, target) {
+  editTarget = target;
+  document.getElementById('editModalTitle').textContent = title;
+  document.getElementById('editInput').value = val;
+  document.getElementById('editModal').classList.remove('hidden');
+  document.getElementById('editInput').focus(); document.getElementById('editInput').select();
+}
+function closeEdit() { document.getElementById('editModal').classList.add('hidden'); editTarget = null; }
+
+// Print
+function printPage() {
+  if (currentGroupId) window.print();
+  else toast('Guruhni oching','error');
+}
+
+// Pull to refresh
+function initPtr() {
+  const main = document.querySelector('main');
+  main.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; ptrActive = false; }, {passive:true});
+  main.addEventListener('touchmove', e => {
+    if (window.scrollY > 0 || ptrActive) return;
+    const diff = e.touches[0].clientY - touchStartY;
+    if (diff > 80) { ptrActive = true; document.getElementById('ptrIndicator').classList.add('show'); }
+  }, {passive:true});
+  main.addEventListener('touchend', () => {
+    if (ptrActive) {
+      document.getElementById('ptrIndicator').classList.remove('show');
+      ptrActive = false;
+      if (currentGroupId) renderGroup();
+      else renderHome();
+      renderDashboard();
+      toast('Yangilandi','success');
+    }
+  }, {passive:true});
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (!currentGroupId || document.querySelector('.modal-overlay:not(.hidden)')) return;
+  const keyMap = {'1':'present','2':'absent','3':'late','4':'excused'};
+  const status = keyMap[e.key];
+  if (!status) return;
+  e.preventDefault();
+  const firstUnmarked = document.querySelector(`.att-btn[data-action="${status}"]:not(.${status})`);
+  if (firstUnmarked) firstUnmarked.click();
+});
+
+// ==================== EVENTS ====================
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === _lang));
+  currentDate = getToday();
+  initTheme();
+  connectWs();
+  initPtr();
+
+  document.getElementById('addGroupBtn').onclick = addGroup;
+  document.getElementById('groupNameInput').onkeydown = e => { if (e.key === 'Enter') addGroup(); };
+  document.getElementById('backBtn').onclick = goHome;
+  document.getElementById('groupSearchInput').oninput = e => { groupSearchTerm = e.target.value; renderHome(); };
+
+  document.getElementById('addStudentBtn').onclick = addStudent;
+  document.getElementById('studentNameInput').onkeydown = e => { if (e.key === 'Enter') addStudent(); };
+  document.getElementById('dateInput').onchange = e => { currentDate = e.target.value; renderGroup(); };
+  document.getElementById('saveAttendanceBtn').onclick = async () => {
+    const students = document.querySelectorAll('.student-item');
+    const p = document.querySelectorAll('.att-btn.present').length;
+    const a = document.querySelectorAll('.att-btn.absent').length;
+    const l = document.querySelectorAll('.att-btn.late').length;
+    const e = document.querySelectorAll('.att-btn.excused').length;
+    const marked = students.length;
+    toast(`\u2705 ${p} keldi, \u23F0 ${l} kech, \u2139\uFE0F ${e} sabab, \u274C ${a} kelmadi (${marked}/${marked})`,'success');
+  };
+  document.getElementById('allPresentBtn').onclick = () => bulkMark('present');
+  document.getElementById('allLateBtn').onclick = () => bulkMark('late');
+  document.getElementById('allExcusedBtn').onclick = () => bulkMark('excused');
+  document.getElementById('allAbsentBtn').onclick = () => bulkMark('absent');
+  document.getElementById('clearAllBtn').onclick = clearAll;
+  document.getElementById('studentSearchInput').oninput = e => { studentSearchTerm = e.target.value; renderGroup(); };
+  document.getElementById('sortSelect').onchange = e => { studentSortBy = e.target.value; renderGroup(); };
+  document.querySelectorAll('.filter-btn').forEach(b => b.onclick = () => {
+    attendanceFilter = b.dataset.filter;
+    document.querySelectorAll('.filter-btn').forEach(x => x.classList.toggle('active', x.dataset.filter === attendanceFilter));
+    renderGroup();
+  });
+
+  document.getElementById('multiSelectToggle').onclick = () => {
+    multiSelectMode = !multiSelectMode;
+    if (!multiSelectMode) selectedStudents.clear();
+    document.getElementById('multiSelectToggle').classList.toggle('active');
+    renderGroup();
+  };
+
+  document.getElementById('copyAttendanceBtn').onclick = copyAttendance;
+  document.getElementById('pasteAttendanceBtn').onclick = pasteAttendance;
+  document.getElementById('profileBtn').onclick = () => {
+    const firstStudent = document.querySelector('.student-item');
+    if (!firstStudent) { toast('O\'quvchi yo\'q','error'); return; }
+    const sid = firstStudent.querySelector('.student-name')?.dataset.sid;
+    if (sid) openProfile(sid);
+  };
+
+  document.getElementById('themeToggle').onclick = toggleTheme;
+  document.getElementById('printBtn').onclick = printPage;
+  document.getElementById('statsBtn').onclick = openStats;
+  document.getElementById('moreBtn').onclick = () => document.getElementById('moreModal').classList.remove('hidden');
+  document.getElementById('closeMoreBtn').onclick = () => document.getElementById('moreModal').classList.add('hidden');
+  document.querySelectorAll('.lang-btn').forEach(b => b.onclick = () => { _lang = b.dataset.lang; localStorage.setItem('davomatLang', _lang); document.querySelectorAll('.lang-btn').forEach(x => x.classList.toggle('active', x.dataset.lang === _lang)); document.getElementById('moreModal').classList.add('hidden'); toast('Til o\'zgartirildi','success'); });
+
+
+  document.getElementById('closeStatsBtn').onclick = () => document.getElementById('statsModal').classList.add('hidden');
+  document.getElementById('exportCsvBtn').onclick = exportCsv;
+  document.getElementById('statsFilterBtn').onclick = () => { statsFrom = document.getElementById('statsFrom').value; statsTo = document.getElementById('statsTo').value; if (statsFrom&&statsTo) loadStats(); else toast('Sanani tanlang','error'); };
+  document.getElementById('statsResetBtn').onclick = () => { statsFrom='';statsTo='';document.getElementById('statsFrom').value='';document.getElementById('statsTo').value='';loadStats(); };
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTab(t.dataset.stab));
+
+  document.getElementById('importStudentBtn').onclick = () => { document.getElementById('moreModal').classList.add('hidden'); openImport(); };
+  document.getElementById('cancelImportBtn').onclick = () => document.getElementById('importModal').classList.add('hidden');
+  document.getElementById('importText').oninput = updateImportPreview;
+  document.getElementById('doImportBtn').onclick = doImport;
+  document.getElementById('fileDrop').onclick = () => {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.csv,.txt';
+    input.onchange = e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        document.getElementById('importText').value = ev.target.result;
+        updateImportPreview();
+        document.getElementById('fileDrop').classList.add('has-file');
+        document.getElementById('fileDrop').textContent = '\u2705 ' + file.name;
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  document.getElementById('exportOptionsBtn').onclick = () => {
+    document.getElementById('moreModal').classList.add('hidden');
+    if (!currentGroupId) { toast('Guruhni oching','error'); return; }
+    document.getElementById('exportFrom').value = '';
+    document.getElementById('exportTo').value = '';
+    document.getElementById('exportModal').classList.remove('hidden');
+  };
+  document.getElementById('cancelExportBtn').onclick = () => document.getElementById('exportModal').classList.add('hidden');
+  document.getElementById('doExportExcelBtn').onclick = () => {
+    const from = document.getElementById('exportFrom').value;
+    const to = document.getElementById('exportTo').value;
+    document.getElementById('exportModal').classList.add('hidden');
+    const q = from && to ? `?from=${from}&to=${to}` : '';
+    window.open(`/api/groups/${currentGroupId}/export/excel${q}`);
+  };
+  document.getElementById('doExportPdfBtn').onclick = () => {
+    const from = document.getElementById('exportFrom').value;
+    const to = document.getElementById('exportTo').value;
+    document.getElementById('exportModal').classList.add('hidden');
+    const q = from && to ? `?from=${from}&to=${to}` : '';
+    window.open(`/api/groups/${currentGroupId}/export/pdf${q}`);
+  };
+
+  document.getElementById('rankingBtn').onclick = () => { document.getElementById('moreModal').classList.add('hidden'); openStats(); switchTab('ranking'); };
+  document.getElementById('worstDaysBtn').onclick = () => { document.getElementById('moreModal').classList.add('hidden'); openStats(); switchTab('worst'); };
+  document.getElementById('heatmapBtn').onclick = () => { document.getElementById('moreModal').classList.add('hidden'); openStats(); switchTab('heatmap'); };
+  document.getElementById('exportExcelBtn').onclick = () => { if(!currentGroupId){toast('Guruhni oching','error');return;} document.getElementById('moreModal').classList.add('hidden'); window.open(`/api/groups/${currentGroupId}/export/excel`); };
+  document.getElementById('exportPdfBtn').onclick = () => { if(!currentGroupId){toast('Guruhni oching','error');return;} document.getElementById('moreModal').classList.add('hidden'); window.open(`/api/groups/${currentGroupId}/export/pdf`); };
+
+  document.getElementById('closeHistoryBtn').onclick = () => document.getElementById('historyModal').classList.add('hidden');
+  document.getElementById('closeMonthlyBtn').onclick = () => document.getElementById('monthlyModal').classList.add('hidden');
+
+  // Profile modal
+  document.getElementById('closeProfileBtn').onclick = () => document.getElementById('profileModal').classList.add('hidden');
+  document.getElementById('saveProfileBtn').onclick = saveProfile;
+
+  document.getElementById('saveEditBtn').onclick = () => {
+    const val = document.getElementById('editInput').value.trim();
+    if (!val) { toast('Qiymat kiriting!','error'); return; }
+    if (editTarget) { if (editTarget.type === 'group') editGroup(editTarget.id,val); else if (editTarget.type === 'student') editStudent(editTarget.id,val); }
+    closeEdit();
+  };
+  document.getElementById('cancelEditBtn').onclick = closeEdit;
+  document.getElementById('editInput').onkeydown = e => { if (e.key === 'Enter') document.getElementById('saveEditBtn').click(); if (e.key === 'Escape') closeEdit(); };
+
+  ['statsModal','historyModal','editModal','moreModal','importModal','monthlyModal','profileModal','exportModal'].forEach(id => {
+    document.getElementById(id).onclick = e => { if (e.target === e.currentTarget) { if (id === 'editModal') closeEdit(); else document.getElementById(id).classList.add('hidden'); } };
+  });
+
+  goHome();
+  renderDashboard();
+});
+</script>
+</body>
+</html>
