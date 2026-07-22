@@ -1,0 +1,3 @@
+Server on :3000
+Swagger: http://localhost:3000/api-docs
+WS: ws://localhost:3000/ws
