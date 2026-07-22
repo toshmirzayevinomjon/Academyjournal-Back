@@ -18,7 +18,7 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data.sqlite');
-const UPLOADS_DIR = path.join(__dirname, '..', 'frontend', 'uploads');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Rate limiting
@@ -26,7 +26,8 @@ const limiter = rateLimit({ windowMs: 60000, max: 200, message: { error: 'Too ma
 app.use(limiter);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+const staticDir = path.join(__dirname, '..', 'frontend');
+if (fs.existsSync(staticDir)) app.use(express.static(staticDir));
 
 // Multer
 const storage = multer.diskStorage({ destination: (r, f, cb) => cb(null, UPLOADS_DIR), filename: (r, f, cb) => cb(null, Date.now() + '-' + crypto.randomBytes(4).toString('hex') + path.extname(f.originalname)) });
@@ -57,6 +58,9 @@ try { db.exec("ALTER TABLE students ADD COLUMN address TEXT"); } catch (_) {}
 try { db.exec("ALTER TABLE students ADD COLUMN notes TEXT"); } catch (_) {}
 
 function genId() { return Date.now().toString(36) + crypto.randomBytes(4).toString('hex'); }
+
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // Swagger
 const swaggerSpec = swaggerJsdoc({ definition: { openapi: '3.0.0', info: { title: 'Davomat API', version: '3.0.0' }, servers: [{ url: `http://localhost:${PORT}` }] }, apis: [__filename] });
