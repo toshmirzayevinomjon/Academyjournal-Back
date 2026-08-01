@@ -38,7 +38,6 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
     { icon: BarChart3, text: t.auth_feature3, desc: t.auth_feature3_desc },
   ]
   const [mode, setMode] = useState<AuthMode>('login')
-  const [role, setRole] = useState<'teacher' | 'admin'>('teacher')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -53,7 +52,7 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, full_name: fullName, is_superuser: role === 'admin' }),
+          body: JSON.stringify({ email, password, full_name: fullName }),
         })
         if (!res.ok) throw new Error(await readApiError(res))
       }
@@ -152,22 +151,9 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
               {mode === 'login' ? t.auth_welcome : t.auth_register_title}
             </h2>
             <p className="mt-1.5 text-sm text-stone-500">
-              {mode === 'login' ? t.auth_login_subtitle : (role === 'admin' ? t.auth_register_subtitle_admin : t.auth_register_subtitle)}
+              {mode === 'login' ? t.auth_login_subtitle : t.auth_register_subtitle}
             </p>
           </div>
-
-          {mode === 'register' && (
-          <div className="mb-3 flex items-center gap-1 rounded-2xl border border-stone-200/70 bg-white/60 p-1 shadow-sm">
-              <button type="button" onClick={() => setRole('teacher')}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl h-10 text-sm font-semibold transition-all ${role === 'teacher' ? 'gradient-brand text-white shadow-md shadow-brand' : 'text-stone-500 hover:text-stone-700'}`}>
-                <GraduationCap className="h-3.5 w-3.5" /> {t.auth_role_teacher}
-              </button>
-              <button type="button" onClick={() => setRole('admin')}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl h-10 text-sm font-semibold transition-all ${role === 'admin' ? 'gradient-brand text-white shadow-md shadow-brand' : 'text-stone-500 hover:text-stone-700'}`}>
-                <ShieldCheck className="h-3.5 w-3.5" /> {t.auth_role_admin}
-              </button>
-            </div>
-          )}
 
           <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1.5 shadow-inner">
             <button type="button" onClick={() => { setMode('login'); setError(null) }}

@@ -194,7 +194,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
             )
-    user = crud.create_user(db, user_in, is_superuser=user_in.is_superuser)
+    user = crud.create_user(db, user_in, is_superuser=False)
     return user
 
 

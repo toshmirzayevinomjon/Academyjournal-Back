@@ -24,7 +24,6 @@ class UserCreate(BaseModel):
     username: Optional[str] = Field(default=None, max_length=100)
     password: str = Field(min_length=8)
     full_name: str = Field(min_length=2, max_length=255)
-    is_superuser: bool = False
 
     @field_validator("full_name")
     @classmethod
