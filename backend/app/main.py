@@ -4,7 +4,9 @@ import logging
 import os
 import threading
 from datetime import date
+from pathlib import Path
 from typing import List
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +15,8 @@ from sqlalchemy.orm import Session
 from . import crud, models, schemas, auth, schedule
 from .database import engine
 from .dependencies import get_current_active_user, get_current_superuser, get_db
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 logger = logging.getLogger(__name__)
 
