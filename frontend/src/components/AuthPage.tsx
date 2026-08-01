@@ -51,6 +51,28 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [googleConfigured, setGoogleConfigured] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/auth/google-status')
+      .then((r) => r.json())
+      .then((data: { configured?: boolean }) => {
+        if (!cancelled) setGoogleConfigured(Boolean(data.configured))
+      })
+      .catch(() => { if (!cancelled) setGoogleConfigured(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const credential = params.get('credential')
+    if (credential) {
+      history.replaceState(null, '', window.location.pathname)
+      handleGoogleCredential(credential)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function doLogin(loginEmail: string, loginPassword: string) {
     const res = await fetch('/api/auth/login', {
@@ -155,29 +177,28 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
   }
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || view !== 'form') return
-    let cancelled = false
+    if (!GOOGLE_CLIENT_ID || googleConfigured === false || view !== 'form') return
     const g = (window as unknown as { google?: any }).google
     if (!g?.accounts?.id) return
     g.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: (resp: { credential?: string }) => {
-        if (resp?.credential) handleGoogleCredential(resp.credential)
-      },
+      ux_mode: 'redirect',
+      login_uri: '/api/auth/google-callback',
       auto_select: false,
     })
     if (googleBtnRef.current) {
-      g.accounts.id.renderButton(googleBtnRef.current, {
+      const container = googleBtnRef.current
+      const width = Math.min(340, Math.max(200, container.clientWidth || 340))
+      g.accounts.id.renderButton(container, {
         theme: 'outline',
         size: 'large',
-        shape: 'pill',
+        shape: 'rectangular',
         text: 'continue_with',
         logo_alignment: 'left',
-        width: 340,
+        width,
       })
     }
-    return () => { cancelled = true }
-  }, [view])
+  }, [view, googleConfigured])
 
   function switchMode(next: AuthMode) {
     setMode(next); setError(null); setNotice(null)
@@ -340,14 +361,14 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
                 </button>
               </form>
 
-              {GOOGLE_CLIENT_ID && (
+              {GOOGLE_CLIENT_ID && googleConfigured !== false && (
                 <>
                   <div className="my-5 flex items-center gap-3">
                     <div className="h-px flex-1 bg-stone-200 dark:bg-slate-700" />
                     <span className="text-xs font-medium text-stone-400">{t.auth_or}</span>
                     <div className="h-px flex-1 bg-stone-200 dark:bg-slate-700" />
                   </div>
-                  <div ref={googleBtnRef} className="flex justify-center" />
+                  <div ref={googleBtnRef} className="g_id_signin mx-auto w-full max-w-[340px]" />
                 </>
               )}
 

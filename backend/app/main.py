@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from urllib.parse import quote
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from . import crud, models, schemas, auth, emailer, schedule
@@ -256,6 +257,36 @@ def verify_email(payload: schemas.VerifyEmail, db: Session = Depends(get_db)):
     user.is_active = True
     db.commit()
     return {"message": "Email muvaffaqiyatli tasdiqlandi"}
+
+
+@app.get("/auth/google-status")
+def google_status():
+    return {"configured": bool(os.environ.get("GOOGLE_CLIENT_ID"))}
+
+
+@app.post("/auth/google-callback")
+async def google_callback(request: Request):
+    form = await request.form()
+    credential = form.get("credential", "")
+    csrf_form = form.get("g_csrf_token", "")
+    csrf_cookie = request.cookies.get("g_csrf_token", "")
+    if csrf_form and csrf_cookie and csrf_form != csrf_cookie:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="CSRF mismatch"
+        )
+    if not credential:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Missing credential"
+        )
+    origin = request.headers.get("origin", "")
+    if origin:
+        next_url = f"{origin}/"
+    else:
+        next_url = os.environ.get("GOOGLE_CALLBACK_URL", "/")
+    sep = "&" if "?" in next_url else "?"
+    return RedirectResponse(
+        f"{next_url}{sep}credential={quote(credential)}", status_code=302
+    )
 
 
 @app.post("/auth/google", response_model=schemas.Token)
