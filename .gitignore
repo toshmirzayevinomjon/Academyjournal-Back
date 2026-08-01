@@ -3,4 +3,7 @@ node_modules/
 __pycache__/
 .ruff_cache/
 frontend/dist/
+.env
+.env.*
+backend/.env
 backend/.env.local
