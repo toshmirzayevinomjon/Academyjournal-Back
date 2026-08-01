@@ -38,20 +38,6 @@ class User(Base):
     groups = relationship("Group", back_populates="owner", cascade="all, delete")
 
 
-class EmailCode(Base):
-    __tablename__ = "email_codes"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), index=True, nullable=False)
-    code = Column(String(10), nullable=False)
-    purpose = Column(String(20), nullable=False)  # 'register' | 'reset'
-    expires_at = Column(DateTime(timezone=True), nullable=False)
-    used = Column(Boolean, default=False, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-
 class Group(Base):
     __tablename__ = "groups"
 

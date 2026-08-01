@@ -1,5 +1,5 @@
 from calendar import monthrange
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from . import models, schemas, auth
@@ -11,46 +11,6 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
 
 def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.username == username).first()
-
-
-def create_email_code(db: Session, email: str, purpose: str) -> str:
-    import random
-
-    db.query(models.EmailCode).filter(
-        models.EmailCode.email == email, models.EmailCode.purpose == purpose
-    ).delete()
-    db.commit()
-    code = str(random.randint(100000, 999999))
-    db.add(
-        models.EmailCode(
-            email=email,
-            code=code,
-            purpose=purpose,
-            expires_at=datetime.utcnow() + timedelta(minutes=15),
-        )
-    )
-    db.commit()
-    return code
-
-
-def verify_email_code(
-    db: Session, email: str, purpose: str, code: str
-) -> Optional[models.EmailCode]:
-    record = (
-        db.query(models.EmailCode)
-        .filter(
-            models.EmailCode.email == email,
-            models.EmailCode.purpose == purpose,
-            models.EmailCode.code == code,
-            models.EmailCode.used == False,
-            models.EmailCode.expires_at > datetime.utcnow(),
-        )
-        .first()
-    )
-    if record:
-        record.used = True
-        db.commit()
-    return record
 
 
 def create_user(

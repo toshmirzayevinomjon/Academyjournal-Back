@@ -2,16 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Sign-In: narrow-screen (iPhone SE/13/14/15 Pro) safety */
-.g_id_signin,
-.g_id_signin > div,
-.g_id_signin iframe {
-  max-width: 100% !important;
-}
-.g_id_signin {
-  overflow: hidden;
-}
-
 @media print {
   body { background: #ffffff !important; }
   .glass-nav, .mobile-menu, .no-print, .modal-overlay, .confetti-piece, .stagger-fade-in, .page-enter { display: none !important; }
