@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from . import crud, models, schemas, auth, schedule
+from . import crud, models, schemas, auth, schedule, database
 from .database import engine
 from .dependencies import get_current_active_user, get_current_superuser, get_db
 
@@ -186,7 +186,12 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "database": database.DATABASE_URL.split(":")[0]
+        .replace("+psycopg2", "")
+        .replace("+pymysql", ""),
+    }
 
 
 @app.post("/auth/register", response_model=schemas.UserProfile)
