@@ -12,11 +12,12 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from . import crud, models, schemas, auth, schedule
+from . import crud, models, schemas, auth, emailer, schedule
 from .database import engine
 from .dependencies import get_current_active_user, get_current_superuser, get_db
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
 
 logger = logging.getLogger(__name__)
 
@@ -195,8 +196,115 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
             )
     first_user = db.query(models.User).count() == 0
-    user = crud.create_user(db, user_in, is_superuser=first_user)
+    verify = emailer.email_configured()
+    user = crud.create_user(db, user_in, is_superuser=first_user, is_active=not verify)
+    if verify:
+        code = crud.create_email_code(db, user.email, "register")
+        emailer.send_email(
+            user.email,
+            "Kundalik — email tasdiqlash kodi",
+            f"<h2>Xush kelibsiz!</h2><p>Email tasdiqlash kodingiz: <b>{code}</b></p><p>Kod 15 daqiqa amal qiladi.</p>",
+        )
     return user
+
+
+@app.post("/auth/forgot-password")
+def forgot_password(payload: schemas.ForgotPassword, db: Session = Depends(get_db)):
+    user = crud.get_user_by_email(db, payload.email)
+    if not user or not user.is_active:
+        return {"message": "Parolni tiklash kodi emailingizga yuborildi"}
+    code = crud.create_email_code(db, user.email, "reset")
+    emailer.send_email(
+        user.email,
+        "Kundalik — parolni tiklash kodi",
+        f"<h2>Parolni tiklash</h2><p>Tasdiqlash kodingiz: <b>{code}</b></p><p>Kod 15 daqiqa amal qiladi.</p>",
+    )
+    return {"message": "Parolni tiklash kodi emailingizga yuborildi"}
+
+
+@app.post("/auth/reset-password")
+def reset_password(payload: schemas.ResetPassword, db: Session = Depends(get_db)):
+    record = crud.verify_email_code(db, payload.email, "reset", payload.code)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kod noto'g'ri yoki muddati o'tgan",
+        )
+    user = crud.get_user_by_email(db, payload.email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    user.password_hash = auth.hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Parol muvaffaqiyatli tiklandi"}
+
+
+@app.post("/auth/verify-email")
+def verify_email(payload: schemas.VerifyEmail, db: Session = Depends(get_db)):
+    record = crud.verify_email_code(db, payload.email, "register", payload.code)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kod noto'g'ri yoki muddati o'tgan",
+        )
+    user = crud.get_user_by_email(db, payload.email)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    user.is_active = True
+    db.commit()
+    return {"message": "Email muvaffaqiyatli tasdiqlandi"}
+
+
+@app.post("/auth/google", response_model=schemas.Token)
+def google_login(payload: schemas.GoogleLogin, db: Session = Depends(get_db)):
+    client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google login is not configured",
+        )
+    from google.oauth2 import id_token as google_id_token
+    from google.auth.transport import requests as google_requests
+
+    try:
+        info = google_id_token.verify_oauth2_token(
+            payload.id_token,
+            google_requests.Request(),
+            client_id,
+        )
+    except Exception as e:
+        logger.warning(f"Google token verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google tokenni tekshirib bo'lmadi",
+        )
+    email = (info.get("email") or "").lower()
+    if not email or not info.get("email_verified"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google email tasdiqlanmagan",
+        )
+    user = crud.get_user_by_email(db, email)
+    if not user:
+        first_user = db.query(models.User).count() == 0
+        import secrets
+
+        user = models.User(
+            email=email,
+            username=None,
+            password_hash=auth.hash_password(secrets.token_urlsafe(24)),
+            full_name=(info.get("name") or "").strip() or email.split("@")[0],
+            is_active=True,
+            is_superuser=first_user,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    token = auth.create_access_token(subject=user.email)
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @app.post("/auth/login", response_model=schemas.Token)
@@ -224,6 +332,11 @@ def login(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email tasdiqlanmagan. Tasdiqlash kodini emailingizdan oling.",
         )
     token = auth.create_access_token(subject=user.email)
     return {"access_token": token, "token_type": "bearer"}

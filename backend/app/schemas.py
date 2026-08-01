@@ -36,6 +36,25 @@ class UserLogin(BaseModel):
     password: str = Field(min_length=8)
 
 
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+
+class ResetPassword(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10)
+    new_password: str = Field(min_length=8)
+
+
+class VerifyEmail(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10)
+
+
+class GoogleLogin(BaseModel):
+    id_token: str
+
+
 class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

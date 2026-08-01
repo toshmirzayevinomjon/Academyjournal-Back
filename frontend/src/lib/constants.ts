@@ -9,3 +9,6 @@ export const WEEKDAYS = [
 ]
 
 export const DEFAULT_DAYS = ['MON', 'WED', 'FRI']
+
+export const GOOGLE_CLIENT_ID =
+  '1066367809333-12olg4k70ti6o9hjpvs2ihgh3d4ckihm.apps.googleusercontent.com'

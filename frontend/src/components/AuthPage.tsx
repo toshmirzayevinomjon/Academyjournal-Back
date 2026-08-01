@@ -1,9 +1,12 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
-import { BookOpen, GraduationCap, KeyRound, Mail, Phone, Send, UserRound, ArrowRight, BarChart3, Users, Sparkles, ShieldCheck } from 'lucide-react'
+import { BookOpen, GraduationCap, KeyRound, Mail, Phone, Send, UserRound, ArrowRight, BarChart3, Users, Sparkles, ShieldCheck, ChevronLeft } from 'lucide-react'
 import { languages } from '../lib/i18n'
+import { GOOGLE_CLIENT_ID } from '../lib/constants'
 
 type AuthMode = 'login' | 'register'
+type AuthView = 'form' | 'verify' | 'forgot' | 'reset'
 type TokenResponse = { access_token: string; token_type: string }
+type RegisterResponse = { is_active: boolean }
 
 async function readApiError(response: Response) {
   try {
@@ -18,6 +21,7 @@ type Props = { onAuth: (token: string) => void; lang?: string }
 export default function AuthPage({ onAuth, lang: l }: Props) {
   const t = languages[(l || 'uz') as keyof typeof languages] || languages.uz
   const parallaxRef = useRef<HTMLDivElement>(null)
+  const googleBtnRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     function onScroll() {
       const el = parallaxRef.current
@@ -38,15 +42,31 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
     { icon: BarChart3, text: t.auth_feature3, desc: t.auth_feature3_desc },
   ]
   const [mode, setMode] = useState<AuthMode>('login')
+  const [view, setView] = useState<AuthView>('form')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
+  const [code, setCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  async function doLogin(loginEmail: string, loginPassword: string) {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: loginEmail, password: loginPassword }),
+    })
+    if (!res.ok) throw new Error(await readApiError(res))
+    const data = (await res.json()) as TokenResponse
+    localStorage.setItem('access_token', data.access_token)
+    onAuth(data.access_token)
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setLoading(true); setError(null)
+    setLoading(true); setError(null); setNotice(null)
     try {
       if (mode === 'register') {
         const res = await fetch('/api/auth/register', {
@@ -55,18 +75,112 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
           body: JSON.stringify({ email, password, full_name: fullName }),
         })
         if (!res.ok) throw new Error(await readApiError(res))
+        const created = (await res.json()) as RegisterResponse
+        if (created.is_active === false) {
+          setView('verify')
+          setNotice(t.auth_verify_desc)
+          return
+        }
       }
-      const res = await fetch('/api/auth/login', {
+      await doLogin(email, password)
+    } catch (err) { setError(err instanceof Error ? err.message : t.auth_error) }
+    finally { setLoading(false) }
+  }
+
+  async function handleVerify(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true); setError(null); setNotice(null)
+    try {
+      const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: email, password }),
+        body: JSON.stringify({ email, code }),
+      })
+      if (!res.ok) throw new Error(await readApiError(res))
+      setNotice(t.auth_verify_success)
+      await doLogin(email, password)
+    } catch (err) { setError(err instanceof Error ? err.message : t.auth_error) }
+    finally { setLoading(false) }
+  }
+
+  async function handleForgot(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true); setError(null); setNotice(null)
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) throw new Error(await readApiError(res))
+      setNotice(t.auth_forgot_sent)
+      setView('reset')
+    } catch (err) { setError(err instanceof Error ? err.message : t.auth_error) }
+    finally { setLoading(false) }
+  }
+
+  async function handleReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true); setError(null); setNotice(null)
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, new_password: newPassword }),
+      })
+      if (!res.ok) throw new Error(await readApiError(res))
+      setNotice(t.auth_reset_success)
+      setPassword(newPassword)
+      setCode(''); setNewPassword('')
+      setMode('login')
+      setView('form')
+    } catch (err) { setError(err instanceof Error ? err.message : t.auth_error) }
+    finally { setLoading(false) }
+  }
+
+  async function handleGoogleCredential(credential: string) {
+    setLoading(true); setError(null); setNotice(null)
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: credential }),
       })
       if (!res.ok) throw new Error(await readApiError(res))
       const data = (await res.json()) as TokenResponse
       localStorage.setItem('access_token', data.access_token)
       onAuth(data.access_token)
-    } catch (err) { setError(err instanceof Error ? err.message : t.auth_error) }
+    } catch (err) { setError(err instanceof Error ? err.message : t.auth_google_error) }
     finally { setLoading(false) }
+  }
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || view !== 'form') return
+    let cancelled = false
+    const g = (window as unknown as { google?: any }).google
+    if (!g?.accounts?.id) return
+    g.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (resp: { credential?: string }) => {
+        if (resp?.credential) handleGoogleCredential(resp.credential)
+      },
+      auto_select: false,
+    })
+    if (googleBtnRef.current) {
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        shape: 'pill',
+        text: 'continue_with',
+        logo_alignment: 'left',
+        width: 340,
+      })
+    }
+    return () => { cancelled = true }
+  }, [view])
+
+  function switchMode(next: AuthMode) {
+    setMode(next); setError(null); setNotice(null)
   }
 
   return (
@@ -148,72 +262,214 @@ export default function AuthPage({ onAuth, lang: l }: Props) {
               <GraduationCap className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-stone-800">
-              {mode === 'login' ? t.auth_welcome : t.auth_register_title}
+              {view === 'form' && (mode === 'login' ? t.auth_welcome : t.auth_register_title)}
+              {view === 'verify' && t.auth_verify_title}
+              {view === 'forgot' && t.auth_forgot}
+              {view === 'reset' && t.auth_reset_title}
             </h2>
             <p className="mt-1.5 text-sm text-stone-500">
-              {mode === 'login' ? t.auth_login_subtitle : t.auth_register_subtitle}
+              {view === 'form' && (mode === 'login' ? t.auth_login_subtitle : t.auth_register_subtitle)}
+              {view === 'verify' && t.auth_verify_desc}
+              {view === 'forgot' && t.auth_forgot_desc}
+              {view === 'reset' && t.auth_forgot_desc}
             </p>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1.5 shadow-inner">
-            <button type="button" onClick={() => { setMode('login'); setError(null) }}
-              className={`h-11 rounded-xl text-sm font-semibold transition-all ${
-                mode === 'login' ? 'bg-white text-stone-800 shadow-md shadow-stone-900/5' : 'text-stone-500 hover:text-stone-700'
-              }`}>{t.auth_login_tab}</button>
-            <button type="button" onClick={() => { setMode('register'); setError(null) }}
-              className={`h-11 rounded-xl text-sm font-semibold transition-all ${
-                mode === 'register' ? 'bg-white text-stone-800 shadow-md shadow-stone-900/5' : 'text-stone-500 hover:text-stone-700'
-              }`}>{t.auth_register_tab}</button>
-          </div>
+          {view === 'form' && (
+            <>
+              <div className="mb-6 grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1.5 shadow-inner">
+                <button type="button" onClick={() => switchMode('login')}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-all ${
+                    mode === 'login' ? 'bg-white text-stone-800 shadow-md shadow-stone-900/5' : 'text-stone-500 hover:text-stone-700'
+                  }`}>{t.auth_login_tab}</button>
+                <button type="button" onClick={() => switchMode('register')}
+                  className={`h-11 rounded-xl text-sm font-semibold transition-all ${
+                    mode === 'register' ? 'bg-white text-stone-800 shadow-md shadow-stone-900/5' : 'text-stone-500 hover:text-stone-700'
+                  }`}>{t.auth_register_tab}</button>
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'register' && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_full_name}</label>
+                    <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                      <UserRound className="h-4 w-4 text-stone-400 transition-colors duration-300 group-focus-within:text-brand" />
+                      <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="Aliyev Alisher" required />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_email}</label>
+                  <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                    <Mail className="h-4 w-4 text-stone-400" />
+                    <input value={email} onChange={(e) => setEmail(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="email@example.com" type="text" required />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_password}</label>
+                  <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                    <KeyRound className="h-4 w-4 text-stone-400" />
+                    <input value={password} onChange={(e) => setPassword(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="••••••••" type="password" minLength={8} required />
+                  </div>
+                  {mode === 'login' && (
+                    <button type="button" onClick={() => { setView('forgot'); setError(null); setNotice(null) }}
+                      className="mt-1.5 text-xs font-semibold text-brand underline decoration-[var(--c3)] underline-offset-2 transition hover:text-brand">
+                      {t.auth_forgot}
+                    </button>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="animate-in flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/90 px-5 py-3.5 text-sm text-red-700 shadow-sm">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100"><span className="text-xs font-bold text-red-600">!</span></div>
+                    {error}
+                  </div>
+                )}
+                {notice && (
+                  <div className="animate-in flex items-center gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-5 py-3.5 text-sm text-emerald-700 shadow-sm">
+                    {notice}
+                  </div>
+                )}
+
+                <button type="submit" disabled={loading} className="btn-primary w-full text-base">
+                  {loading ? (
+                    <span className="flex items-center gap-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t.auth_loading}</span>
+                  ) : (
+                    <>{mode === 'login' ? t.auth_login_btn : t.auth_register_btn} <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              </form>
+
+              {GOOGLE_CLIENT_ID && (
+                <>
+                  <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-stone-200 dark:bg-slate-700" />
+                    <span className="text-xs font-medium text-stone-400">{t.auth_or}</span>
+                    <div className="h-px flex-1 bg-stone-200 dark:bg-slate-700" />
+                  </div>
+                  <div ref={googleBtnRef} className="flex justify-center" />
+                </>
+              )}
+
+              <p className="mt-6 text-center text-xs text-stone-400">
+                {mode === 'login' ? t.auth_no_account : t.auth_has_account}
+                <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+                  className="font-semibold text-brand underline decoration-[var(--c3)] underline-offset-2 transition hover:text-brand">
+                  {mode === 'login' ? t.auth_register_link : t.auth_login_link}
+                </button>
+              </p>
+            </>
+          )}
+
+          {view === 'verify' && (
+            <form onSubmit={handleVerify} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_full_name}</label>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_verify_code}</label>
                 <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
-                  <UserRound className="h-4 w-4 text-stone-400 transition-colors duration-300 group-focus-within:text-brand" />
-                  <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="Aliyev Alisher" required />
+                  <KeyRound className="h-4 w-4 text-stone-400" />
+                  <input value={code} onChange={(e) => setCode(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="123456" inputMode="numeric" maxLength={6} required />
                 </div>
               </div>
-            )}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_email}</label>
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
-                <Mail className="h-4 w-4 text-stone-400" />
-                <input value={email} onChange={(e) => setEmail(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="email@example.com" type="text" required />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_password}</label>
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
-                <KeyRound className="h-4 w-4 text-stone-400" />
-                <input value={password} onChange={(e) => setPassword(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="••••••••" type="password" minLength={8} required />
-              </div>
-            </div>
 
-            {error && (
-              <div className="animate-in flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/90 px-5 py-3.5 text-sm text-red-700 shadow-sm">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100"><span className="text-xs font-bold text-red-600">!</span></div>
-                {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={loading} className="btn-primary w-full text-base">
-              {loading ? (
-                <span className="flex items-center gap-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t.auth_loading}</span>
-              ) : (
-                <>{mode === 'login' ? t.auth_login_btn : t.auth_register_btn} <ArrowRight className="h-4 w-4" /></>
+              {error && (
+                <div className="animate-in flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/90 px-5 py-3.5 text-sm text-red-700 shadow-sm">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100"><span className="text-xs font-bold text-red-600">!</span></div>
+                  {error}
+                </div>
               )}
-            </button>
-          </form>
+              {notice && (
+                <div className="animate-in flex items-center gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-5 py-3.5 text-sm text-emerald-700 shadow-sm">
+                  {notice}
+                </div>
+              )}
 
-          <p className="mt-6 text-center text-xs text-stone-400">
-            {mode === 'login' ? t.auth_no_account : t.auth_has_account}
-            <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null) }}
-              className="font-semibold text-brand underline decoration-[var(--c3)] underline-offset-2 transition hover:text-brand">
-              {mode === 'login' ? t.auth_register_link : t.auth_login_link}
-            </button>
-          </p>
+              <button type="submit" disabled={loading} className="btn-primary w-full text-base">
+                {loading ? (
+                  <span className="flex items-center gap-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t.auth_loading}</span>
+                ) : (
+                  <>{t.auth_verify_btn} <ArrowRight className="h-4 w-4" /></>
+                )}
+              </button>
+              <button type="button" onClick={() => { setView('form'); setError(null); setNotice(null) }}
+                className="flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-stone-500 transition hover:text-stone-700">
+                <ChevronLeft className="h-3.5 w-3.5" /> {t.auth_back}
+              </button>
+            </form>
+          )}
+
+          {view === 'forgot' && (
+            <form onSubmit={handleForgot} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_email}</label>
+                <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                  <Mail className="h-4 w-4 text-stone-400" />
+                  <input value={email} onChange={(e) => setEmail(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="email@example.com" type="text" required />
+                </div>
+              </div>
+
+              {error && (
+                <div className="animate-in flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/90 px-5 py-3.5 text-sm text-red-700 shadow-sm">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100"><span className="text-xs font-bold text-red-600">!</span></div>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} className="btn-primary w-full text-base">
+                {loading ? (
+                  <span className="flex items-center gap-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t.auth_loading}</span>
+                ) : (
+                  <>{t.auth_forgot_btn} <ArrowRight className="h-4 w-4" /></>
+                )}
+              </button>
+              <button type="button" onClick={() => { setView('form'); setError(null); setNotice(null) }}
+                className="flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-stone-500 transition hover:text-stone-700">
+                <ChevronLeft className="h-3.5 w-3.5" /> {t.auth_back}
+              </button>
+            </form>
+          )}
+
+          {view === 'reset' && (
+            <form onSubmit={handleReset} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_reset_code}</label>
+                <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                  <KeyRound className="h-4 w-4 text-stone-400" />
+                  <input value={code} onChange={(e) => setCode(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="123456" inputMode="numeric" maxLength={6} required />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-stone-700">{t.auth_reset_new_password}</label>
+                <div className="flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white/80 px-4 transition-all duration-300 focus-within:border-brand focus-within:bg-white focus-within:shadow-xl focus-within:shadow-brand focus-within:ring-2 focus-within:ring-brand">
+                  <KeyRound className="h-4 w-4 text-stone-400" />
+                  <input value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-full w-full bg-transparent text-sm text-stone-800 outline-none placeholder:text-stone-400" placeholder="••••••••" type="password" minLength={8} required />
+                </div>
+              </div>
+
+              {error && (
+                <div className="animate-in flex items-center gap-3 rounded-xl border border-red-200/80 bg-red-50/90 px-5 py-3.5 text-sm text-red-700 shadow-sm">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-red-100"><span className="text-xs font-bold text-red-600">!</span></div>
+                  {error}
+                </div>
+              )}
+              {notice && (
+                <div className="animate-in flex items-center gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/90 px-5 py-3.5 text-sm text-emerald-700 shadow-sm">
+                  {notice}
+                </div>
+              )}
+
+              <button type="submit" disabled={loading} className="btn-primary w-full text-base">
+                {loading ? (
+                  <span className="flex items-center gap-2"><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t.auth_loading}</span>
+                ) : (
+                  <>{t.auth_reset_btn} <ArrowRight className="h-4 w-4" /></>
+                )}
+              </button>
+              <button type="button" onClick={() => { setView('forgot'); setError(null); setNotice(null) }}
+                className="flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-stone-500 transition hover:text-stone-700">
+                <ChevronLeft className="h-3.5 w-3.5" /> {t.auth_back}
+              </button>
+            </form>
+          )}
 
           <div className="mt-8 rounded-2xl border border-stone-200/70 dark:border-slate-700/60 bg-white/60 dark:bg-slate-800/40 p-4">
             <p className="mb-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-slate-500">{t.contact_title}</p>
