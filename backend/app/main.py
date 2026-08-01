@@ -17,7 +17,7 @@ from .database import engine
 from .dependencies import get_current_active_user, get_current_superuser, get_db
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-load_dotenv(Path(__file__).resolve().parent.parent / ".env.local")
+load_dotenv(Path(__file__).resolve().parent.parent / ".env.local", override=True)
 
 logger = logging.getLogger(__name__)
 
