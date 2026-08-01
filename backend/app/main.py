@@ -21,6 +21,8 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env.local", override=True
 
 logger = logging.getLogger(__name__)
 
+ADMIN_EMAIL = "toshmirzayevinomjon@gmail.com"
+
 BOT_ENABLED = False
 if os.environ.get("TELEGRAM_BOT_TOKEN"):
     try:
@@ -200,8 +202,11 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken"
             )
-    first_user = db.query(models.User).count() == 0
-    user = crud.create_user(db, user_in, is_superuser=first_user)
+    user = crud.create_user(
+        db,
+        user_in,
+        is_superuser=(user_in.email.strip().lower() == ADMIN_EMAIL),
+    )
     return user
 
 
@@ -1516,8 +1521,7 @@ def update_user(
         )
     if upd.is_active is not None:
         user.is_active = upd.is_active
-    if upd.is_superuser is not None:
-        user.is_superuser = upd.is_superuser
+    user.is_superuser = user.email.strip().lower() == ADMIN_EMAIL
     db.commit()
     db.refresh(user)
     return user
