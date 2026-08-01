@@ -136,7 +136,12 @@ except Exception:
 app = FastAPI(title="Kundalik LMS Attendance API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://kundalik.up.railway.app",
+        "https://kundalik-back.up.railway.app",
+        "http://127.0.0.1:5174",
+        "http://localhost:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
